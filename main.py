@@ -63,18 +63,27 @@ cdbrows = cdb.max_row + 1
 results_wb = Workbook()
 
 # create worksheets for each type of result
+results_ws0 = results_wb.active # the default active sheet
 results_ws1 = results_wb.create_sheet("Combos Renamed")
 results_ws2 = results_wb.create_sheet("Frameshifts")
 
+# intial values
+results_ws1_row = 1
+results_ws2_row = 1
+
+results_ws0.title = "Summary"
+results_ws0['A1'].value = 'See the other worksheets for a summary of some results.'
+
+results_ws1['A1'].value = 'Old construct name'
+results_ws1['B1'].value = 'New construct name'
+
+results_ws2['A1'].value = 'Construct'
+results_ws2['B1'].value = 'Frameshift identified'
 
 # newNames_wb = Workbook()
 # newNames_ws = newNames_wb.active
 
 ### fix underscores and dashes in mutation list
-
-currentnewrow = 0
-results_ws1['A1'].value = 'Old construct name'
-results_ws1['B1'].value = 'New construct name'
 
 from fix_combo_names import fixComboNames
 for i in range(2, cdbrows):
@@ -85,12 +94,12 @@ for i in range(2, cdbrows):
         cdb[samplename_col + str(i)].value = newconstructname # updates the CDB name
         
         # The following code summarizes the changes in a spreadsheet. 
-        currentnewrow = results_ws1.max_row + 1
-        results_ws1['A' + str(currentnewrow)].value = constructname
-        results_ws1['B' + str(currentnewrow)].value = newconstructname
+        results_ws1_row = results_ws1.max_row + 1
+        results_ws1['A' + str(results_ws1_row)].value = constructname
+        results_ws1['B' + str(results_ws1_row)].value = newconstructname
 
-results_ws1.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/results_summary.xlsx')    
-results_ws1.close()
+# results_ws1.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/results_summary.xlsx')    
+# results_ws1.close()
 # newNames_wb.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/Fixed_Combo_Names_summary.xlsx')    
 # newNames_wb.close()
 
@@ -172,12 +181,19 @@ for j in range(2, msrows):
                 
                 from annotations import annotate
                 finalComment = annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold)
+                
+                from sequence_funcs import findFrameshift
+                frameshiftList = findFrameshift(denovovar)
+                if frameshiftList is not None:
+                    if frameshiftList[0] == True:
+                        finalComment += ' ' + 'frameshift-' + frameshiftList[1] + ', '
+                        
                 cdb[comments_col + str(cdbindex)].value = finalComment
                 # Frameshifts with a commonvar are included in this annotation function. 
                 
                 
         ### Frameshifts without a commonvar
-        else:
+        else: # commonvar is None
             origComment = cdb[comments_col + str(cdbindex)].value
             from sequence_funcs import findFrameshift
             frameshiftList = findFrameshift(denovovar)
@@ -185,6 +201,11 @@ for j in range(2, msrows):
                 if frameshiftList[0] == True:
                     finalComment = origComment + ': frameshift-' + frameshiftList[1] + ', ' # simply states the residue at which the frameshift starts.
         
+        ### save frameshift results to results_ws2
+        if frameshiftList is not None:
+            results_ws2_row = results_ws2.max_row + 1
+            results_ws2['A' + str(results_ws2_row)].value = constructname
+            results_ws2['B' + str(results_ws2_row)].value = denovovar
         
         
         ### Other single nucleotide polymorphisms and insertion/deletions:
@@ -202,6 +223,7 @@ for j in range(2, msrows):
     
 
 cdb_file.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/construct-db_updated_test.xlsx')
-
-master_summary_file.close()
 cdb_file.close()
+results_wb.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/Results_Summary.xlsx')
+results_wb.close()
+master_summary_file.close()

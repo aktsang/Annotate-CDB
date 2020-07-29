@@ -9,6 +9,7 @@ Called by main.py
 """
 import re
 
+# This function creates a comment with called mutations and extra undesired mutations ("xmutations")
 def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold):
     
     from reference_sequences import scaffold_protein
@@ -84,21 +85,22 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
             # get original residue by xresidueNuym
             
     # Check for a frameshift in denovovar
-    from sequence_funcs import findFrameshift
-    frameshiftList = findFrameshift(denovovar)
+    # move these instructions to main? 
+    # from sequence_funcs import findFrameshift
+    # frameshiftList = findFrameshift(denovovar)
     
-    if frameshiftList is not None:
-        if frameshiftList[0] == True:
-            newComment += 'frameshift-' + frameshiftList[1] + ', '
+    # if frameshiftList is not None:
+    #     if frameshiftList[0] == True:
+    #         newComment += 'frameshift-' + frameshiftList[1] + ', '
         
     finalComment = origComment + newComment
     return finalComment
 
     
     #Search for an existing comment (there shouldn't be one if no Sanger sequence exists)
-    prevComment = origComment.find(':')
-    if prevComment == -1: # condition when no comment is found
-        print('')
+    # prevComment = origComment.find(':')
+    # if prevComment == -1: # condition when no comment is found
+    #     print('')
     
     # get the mutation(s) found
     # get the codon(s) found

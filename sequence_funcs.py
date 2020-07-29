@@ -65,7 +65,7 @@ def findFrameshift(mutations): #pass a mutation list into this function
         for i in range(0, len(residues)-1):
             intervalList.append(int(residues[i+1])-int(residues[i]))
         
-        if len(intervalList) > 3: # arbitrary search for frameshifted lists more than 3 residues long
+        if len(intervalList) > 3: # search only mutation lists longer than 3 substitutions for frameshifts. Arbitrary threshold.
             for j in range(0, len(intervalList)):
                 if intervalList[j] < 3: # if the amino acids are less than 3 positions apart
                     frameshift = True

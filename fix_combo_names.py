@@ -26,8 +26,8 @@ def fixComboNames(constructname):
     dashRegex = re.compile(r'([A-Z]\d+X-)+') #search pattern for mutations separated by dashes (e.g. N391X-T392X)
     mutRegex = re.compile(r'[A-Z]\d+[A-Z]') # search pattern for any mutation (e.g. N391X, T293Y)
     
-    uscore_mo = uscoreRegex.search(constructname)
-    dash_mo = dashRegex.search(constructname)
+    uscore_mo = uscoreRegex.search(constructname) #underscore regex match object
+    dash_mo = dashRegex.search(constructname) # dash regex match object
     
     # initialize flag variables
     uflag = False

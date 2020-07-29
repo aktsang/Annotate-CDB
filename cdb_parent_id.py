@@ -16,6 +16,7 @@ import re
 import os
 import openpyxl
 
+# input the CDB file here
 cdbfileloc = '/Users/tsanga/Documents/Arthur_GENIE_Work/Tn5/DeepSeqResults/Analysis_scripting_and_testing/testfiles/ConstructDB_combined_testing.xlsx'
 
 from openpyxl import Workbook
