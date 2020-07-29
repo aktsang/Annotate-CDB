@@ -59,14 +59,22 @@ cdb = cdb_file.active
 cdbrows = cdb.max_row + 1
 
 
+### Results workbook initialization
+results_wb = Workbook()
+
+# create worksheets for each type of result
+results_ws1 = results_wb.create_sheet("Combos Renamed")
+results_ws2 = results_wb.create_sheet("Frameshifts")
+
+
+# newNames_wb = Workbook()
+# newNames_ws = newNames_wb.active
+
 ### fix underscores and dashes in mutation list
 
-newNames_wb = Workbook()
-newNames_ws = newNames_wb.active
-
 currentnewrow = 0
-newNames_ws['A1'].value = 'Old construct name'
-newNames_ws['B1'].value = 'New construct name'
+results_ws1['A1'].value = 'Old construct name'
+results_ws1['B1'].value = 'New construct name'
 
 from fix_combo_names import fixComboNames
 for i in range(2, cdbrows):
@@ -77,12 +85,14 @@ for i in range(2, cdbrows):
         cdb[samplename_col + str(i)].value = newconstructname # updates the CDB name
         
         # The following code summarizes the changes in a spreadsheet. 
-        currentnewrow = newNames_ws.max_row + 1
-        newNames_ws['A' + str(currentnewrow)].value = constructname
-        newNames_ws['B' + str(currentnewrow)].value = newconstructname
+        currentnewrow = results_ws1.max_row + 1
+        results_ws1['A' + str(currentnewrow)].value = constructname
+        results_ws1['B' + str(currentnewrow)].value = newconstructname
 
-newNames_wb.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/Fixed_Combo_Names_summary.xlsx')    
-newNames_wb.close()
+results_ws1.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/results_summary.xlsx')    
+results_ws1.close()
+# newNames_wb.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/Fixed_Combo_Names_summary.xlsx')    
+# newNames_wb.close()
 
 print('Fix combo names complete.')
 
@@ -173,9 +183,14 @@ for j in range(2, msrows):
             frameshiftList = findFrameshift(denovovar)
             if frameshiftList is not None:
                 if frameshiftList[0] == True:
-                    finalComment = origComment + ': frameshift-' + frameshiftList[1] + ', '
+                    finalComment = origComment + ': frameshift-' + frameshiftList[1] + ', ' # simply states the residue at which the frameshift starts.
         
         
+        
+        ### Other single nucleotide polymorphisms and insertion/deletions:
+        
+    
+    
     elif seqFound == True: # found a Sanger sequence, don't modify to CDB record
         # TESTING ONLY - color the unchanged construct records green
         cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
