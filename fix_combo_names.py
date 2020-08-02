@@ -61,19 +61,3 @@ def fixComboNames(constructname):
         
         return newconstructname
 
-        
-        # print('All of the mutations found: ' + str(matches))
-        # print('first mutation position: ' + str(firstMut))
-        # print('last mutation position: ' + str(lastMut))
-        # print('character length of the last mutation: ' + str(lastMutLen))
-        # print('name part 1: ' + name1)
-        # print('name part 2: ' + name2)
-        # print('name part 3: ' + name3)
-        
-        # print('The new name2 is: ' + newname2)
-        # print('The new constructname is: ' + newconstructname)
-
-
-            
-
-

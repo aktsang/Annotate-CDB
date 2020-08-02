@@ -98,3 +98,64 @@ def translate(dna):
             break
             
     return prot_seq
+
+
+### find single nucleotide polymorphisms
+# exclude the intended SDM codons
+def polymorphisms(scaffold, denovoseq, goodMutations):
+    import re
+    aanumRegex = re.compile(r'[A-Z](\d+)') # search pattern for residue number
+    
+    # scaffold is a category number, so get the dna sequence and make a codon index
+    from reference_sequences import scaffold_dna
+    ref_dna = scaffold_dna[str(scaffold)] # get the reference dna sequence
+    ref_dna_codons = codon_index(ref_dna) # break the sequence into codons
+    sdm_sites = aanumRegex.findall(goodMutations) # find the sdm residue numbers to evaluate later
+    
+    # make a list of sdm base numbers to exclude from further analysis
+    sdm_bases = []
+    if sdm_sites is not None:
+        for i in range(len(sdm_sites)):
+            codonbasenum = 3*int(sdm_sites[i])
+            sdm_bases.append(codonbasenum-2)
+            sdm_bases.append(codonbasenum-1)
+            sdm_bases.append(codonbasenum)
+            
+        print(sdm_bases)
+    
+    # trim scaffold sequence at 3' end if necessary (scaffold probably has the stop codon, while denovoseq omits it)
+    if len(ref_dna) > len(denovoseq):
+        while len(ref_dna) > len(denovoseq):
+            ref_dna = ref_dna[:len(ref_dna)-1]
+            
+    
+    # create the alignment
+    from Bio import pairwise2
+    gap_open_penalty = -2
+    gap_extend_penalty = -1
+    alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
+    while len(alignment) > 1:
+        if gap_open_penalty < -50: # something is clearly very wrong with the data at this point
+                break
+        gap_open_penalty -= 1
+        gap_extend_penalty -=0.5
+        alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
+    
+    refseq = alignment[0].seqA
+    testseq = alignment[0].seqB
+    
+    polymorphism_comment = ''
+    
+    for j in range(len(refseq)):
+        if j+1 not in sdm_bases:
+            if refseq[j] != testseq[j]:
+                if testseq[j] == '-':
+                    polymorphism_comment += str(refseq[j]).lower() + str(j+1) + 'del, '
+                elif refseq[j] == '-' and testseq[j+1] == refseq[j]:
+                    polymorphism_comment += ' ins' + str(j+1) + str(refseq[j+1]).lower() + str(j+2) + ', '
+                else:
+                    polymorphism_comment += 'snp-' + str(refseq[j]).lower() + str(j+1) + str(testseq[j]).lower() + ', '
+            
+    print(polymorphism_comment)
+            
+    return alignment, polymorphism_comment

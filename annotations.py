@@ -40,7 +40,7 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
             scaffoldSeq = scaffold_dna[str(scaffold)]
             reflength = len(scaffoldSeq)
             
-            if len(denovoseq) > 0.9 * reflength:
+            if len(denovoseq) > 0.9 * reflength: # here, having more than 90% of the gene sequence length is considered full length
                 seqlength = 'full-length'
             else:
                 seqlength = 'partial-length'
@@ -96,15 +96,3 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
     finalComment = origComment + newComment
     return finalComment
 
-    
-    #Search for an existing comment (there shouldn't be one if no Sanger sequence exists)
-    # prevComment = origComment.find(':')
-    # if prevComment == -1: # condition when no comment is found
-    #     print('')
-    
-    # get the mutation(s) found
-    # get the codon(s) found
-    # get full length or partial length
-    # list additional mutations
-    # start-base number if applicable
-    # end-base number if partial length

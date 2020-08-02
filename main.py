@@ -21,6 +21,7 @@ from openpyxl import Workbook
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.styles.colors import Color
+from Bio import pairwise2
 
 ### file inputs
 
@@ -66,19 +67,33 @@ results_wb = Workbook()
 results_ws0 = results_wb.active # the default active sheet
 results_ws1 = results_wb.create_sheet("Combos Renamed")
 results_ws2 = results_wb.create_sheet("Frameshifts")
+results_ws3 = results_wb.create_sheet("Ambiguous Sequences")
 
-# intial values
+# intial values of the excel results summary
 results_ws1_row = 1
 results_ws2_row = 1
+results_ws3_row = 1
 
 results_ws0.title = "Summary"
-results_ws0['A1'].value = 'See the other worksheets for a summary of some results.'
+results_ws0['A1'].value = 'Worksheet name'
+results_ws0['B1'].value = 'Description'
+results_ws0['A2'].value = 'Combos Renamed'
+results_ws0['B2'].value = 'Combo mutation names that contained underscores or dashes, which were corrected to spaces.'
+results_ws0['A3'].value = 'Frameshifts'
+results_ws0['B3'].value = 'Frameshifts found in the master summary data.'
+results_ws0['A4'].value = 'Ambiguous Sequences'
+results_ws0['B4'].value = 'Called mutations with mismatches between mapped and de novo assembly gene sequences.'
 
 results_ws1['A1'].value = 'Old construct name'
 results_ws1['B1'].value = 'New construct name'
 
 results_ws2['A1'].value = 'Construct'
 results_ws2['B1'].value = 'Frameshift identified'
+results_ws2['C1'].value = 'Comment'
+
+results_ws3['A1'].value = 'Construct'
+results_ws3['B1'].value = 'map2ref'
+results_ws3['C1'].value = 'denovo'
 
 # newNames_wb = Workbook()
 # newNames_ws = newNames_wb.active
@@ -153,6 +168,7 @@ for j in range(2, msrows):
                 
                 # TESTING ONLY - color the changed construct names yellow
                 cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
+                cdb[comments_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
                 print('Name updated: ' + newconstructname[0])
                 
             ### udpate sequence
@@ -172,6 +188,11 @@ for j in range(2, msrows):
                     # common var called but sequences are different.
                     # make the cell orange
                     cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffbf00")
+                    # add to spreadsheet
+                    results_ws3_row = results_ws3.max_row + 1
+                    results_ws3['A' + str(results_ws3_row)].value = constructname
+                    results_ws3['B' + str(results_ws3_row)].value = map2refseq
+                    results_ws3['C' + str(results_ws3_row)].value = denovoseq
                     
                 ### Annotation functions
                 origComment = cdb[comments_col + str(cdbindex)].value
@@ -200,12 +221,16 @@ for j in range(2, msrows):
             if frameshiftList is not None:
                 if frameshiftList[0] == True:
                     finalComment = origComment + ': frameshift-' + frameshiftList[1] + ', ' # simply states the residue at which the frameshift starts.
+                    cdb[comments_col + str(cdbindex)].value = finalComment
+                    
         
         ### save frameshift results to results_ws2
         if frameshiftList is not None:
             results_ws2_row = results_ws2.max_row + 1
             results_ws2['A' + str(results_ws2_row)].value = constructname
             results_ws2['B' + str(results_ws2_row)].value = denovovar
+            results_ws2['C' + str(results_ws2_row)].value = finalComment
+            
         
         
         ### Other single nucleotide polymorphisms and insertion/deletions:
@@ -218,6 +243,8 @@ for j in range(2, msrows):
         cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
             
         
+    # compile 
+    
     # tally residues found from degenerate mutagenesis
 
     
@@ -227,3 +254,5 @@ cdb_file.close()
 results_wb.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/Results_Summary.xlsx')
 results_wb.close()
 master_summary_file.close()
+
+print('The operation has completed.')

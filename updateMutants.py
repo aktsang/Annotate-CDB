@@ -24,10 +24,6 @@ def updateMutations(constructname, map2refvar, denovovar, commonvar):
         cname_match = mutRegex.findall(constructname) # get list of mutations in CDB
         commonvar_match = mutRegex.findall(commonvar) # get list of mutations called by DeepSeq
         
-        # print('Mutations')
-        # print(cname_match) # testing only
-        # print(commonvar_match) # testing only
-        
         num_ds_Matches = len(commonvar_match) # get number of mutations found
         num_cdb_Matches = len(cname_match) # get number of mutations expected
         
@@ -47,10 +43,6 @@ def updateMutations(constructname, map2refvar, denovovar, commonvar):
         cname_aa_match = aaRegex.findall(name2) # find residue numbers from name2 fragment of constructname
         commonvar_aa_match = aaRegex.findall(commonvar) # find residue numbers from commonvar
         
-        # print('Residues')
-        # print(cname_aa_match) # testing only
-        # print(commonvar_aa_match) # testing only
-        
         newname2 = '' # the new construct name with sequenced mutations
         mutList = [] # a list of the updated (desired) mutations
         miscMutList = [] # a list of unexpected mutations
@@ -66,16 +58,7 @@ def updateMutations(constructname, map2refvar, denovovar, commonvar):
                     
         if len(newname2) > 1:
             newconstructname = name1 + newname2 + name3 # if newname2 was changed then create a new construct name. 
-            # print(newconstructname)
-        
-        # if len(miscMut) > 0:
-            # print(miscMut)
-            
-        # print(cname_match)
-        # print(commonvar)
-        # print(commonvar_match)
-        # print(commonvar_aa_match)
-        # print(newname2)
+
         
         if len(newname2) > 1:
             return newconstructname, mutList, miscMutList
