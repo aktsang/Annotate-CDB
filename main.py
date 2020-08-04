@@ -23,6 +23,9 @@ from openpyxl.styles import PatternFill
 from openpyxl.styles.colors import Color
 from Bio import pairwise2
 
+from cdb_globals import *
+
+
 ### file inputs
 
 # location of sequencing results file from Quantitative Genomics
@@ -68,11 +71,13 @@ results_ws0 = results_wb.active # the default active sheet
 results_ws1 = results_wb.create_sheet("Combos Renamed")
 results_ws2 = results_wb.create_sheet("Frameshifts")
 results_ws3 = results_wb.create_sheet("Ambiguous Sequences")
+results_ws4 = results_wb.create_sheet("Mutation Count")
 
 # intial values of the excel results summary
 results_ws1_row = 1
 results_ws2_row = 1
 results_ws3_row = 1
+results_ws4_row = 4
 
 results_ws0.title = "Summary"
 results_ws0['A1'].value = 'Worksheet name'
@@ -83,6 +88,8 @@ results_ws0['A3'].value = 'Frameshifts'
 results_ws0['B3'].value = 'Frameshifts found in the master summary data.'
 results_ws0['A4'].value = 'Ambiguous Sequences'
 results_ws0['B4'].value = 'Called mutations with mismatches between mapped and de novo assembly gene sequences.'
+results_ws0['A5'].value = 'Mutation Count'
+results_ws0['B5'].value = 'All non-SDM mutations found in the dataset.'
 
 results_ws1['A1'].value = 'Old construct name'
 results_ws1['B1'].value = 'New construct name'
@@ -94,6 +101,12 @@ results_ws2['C1'].value = 'Comment'
 results_ws3['A1'].value = 'Construct'
 results_ws3['B1'].value = 'map2ref'
 results_ws3['C1'].value = 'denovo'
+
+results_ws4['A1'].value = 'Total number of entries: '
+results_ws4['A2'].value = 'Number of constructs updated: '
+results_ws4['A4'].value = 'Mutation'
+results_ws4['B4'].value = 'Number of constructs containing'
+# the total number of constructs processed is added to the workbook at the end of the program. 
 
 # newNames_wb = Workbook()
 # newNames_ws = newNames_wb.active
@@ -123,8 +136,7 @@ print('Fix combo names complete.')
 
 ### Update the ConstructDB list using the master summary sequencing data. 
 
-platewellRegex = re.compile(r'A\d\d\d\d_[A-H]\d\d') 
-
+platewellRegex = re.compile(r'A\d\d\d\d_[A-H]\d\d')
     
 # loop through master summary 
 for j in range(2, msrows):
@@ -170,6 +182,7 @@ for j in range(2, msrows):
                 cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
                 cdb[comments_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
                 print('Name updated: ' + newconstructname[0])
+                constructs_updated += 1
                 
             ### udpate sequence
                 # read map2ref and denovo sequences
@@ -209,19 +222,42 @@ for j in range(2, msrows):
                     if frameshiftList[0] == True:
                         finalComment += ' ' + 'frameshift-' + frameshiftList[1] + ', '
                         
+                from sequence_funcs import polymorphisms
+                other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+                if other_polymorphisms is not None:
+                    finalComment += other_polymorphisms
+                        
                 cdb[comments_col + str(cdbindex)].value = finalComment
                 # Frameshifts with a commonvar are included in this annotation function. 
                 
                 
-        ### Frameshifts without a commonvar
+                
+                
+        
         else: # commonvar is None
+        
+            ### Frameshifts without a commonvar    
             origComment = cdb[comments_col + str(cdbindex)].value
+            
+            # compare the sequences provided to determine what happened (wild type?)
+        
+        
             from sequence_funcs import findFrameshift
             frameshiftList = findFrameshift(denovovar)
             if frameshiftList is not None:
                 if frameshiftList[0] == True:
                     finalComment = origComment + ': frameshift-' + frameshiftList[1] + ', ' # simply states the residue at which the frameshift starts.
-                    cdb[comments_col + str(cdbindex)].value = finalComment
+            else:
+                finalComment = origComment
+                    
+            # If no commonvar exists, no need to look for problems besides frameshifts.
+            
+            # from sequence_funcs import polymorphisms
+            # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+            # if other_polymorphisms is not None:
+            #     finalComment += other_polymorphisms
+            
+            cdb[comments_col + str(cdbindex)].value = finalComment
                     
         
         ### save frameshift results to results_ws2
@@ -234,7 +270,10 @@ for j in range(2, msrows):
         
         
         ### Other single nucleotide polymorphisms and insertion/deletions:
-        
+        # from sequence_funcs import polymorphisms
+        # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+        # if other_polymorphisms is not None:
+        #     finalComment += other_polymorphisms
     
     
     elif seqFound == True: # found a Sanger sequence, don't modify to CDB record
@@ -243,11 +282,26 @@ for j in range(2, msrows):
         cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
             
         
-    # compile 
+# tally dna mutations in dna_mutlist
+
+# first traverse the dna_mutlist and add unique values to a new list
+unique_muts = []
+for l in range(0, len(dna_mutlist)):
+    if dna_mutlist[l] not in unique_muts:
+        unique_muts.append(dna_mutlist[l])
+
+# add up the mutations
+for m in range(0, len(unique_muts)):
+    occurrences = dna_mutlist.count(unique_muts[m])
+    results_ws4_row += 1
+    results_ws4['A' + str(results_ws4_row)].value = unique_muts[m]
+    results_ws4['B' + str(results_ws4_row)].value = occurrences
+        
     
     # tally residues found from degenerate mutagenesis
 
-    
+results_ws4['B1'].value = j+1 # fill in the number of constructs processed. 
+results_ws4['B2'].value = constructs_updated # fill in the number of construct names changed
 
 cdb_file.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/construct-db_updated_test.xlsx')
 cdb_file.close()

@@ -7,7 +7,7 @@ Created on Tue Jul 14 17:58:52 2020
 
 Called by main.py, updateMutants.py, and annotations.py
 """
-
+from cdb_globals import *
 
 def checkSequence(seqtext):
     seqlen = len(seqtext)
@@ -30,6 +30,8 @@ def compareSeq(map2refseq, denovoseq):
         return False # more code to be written
     
 
+
+
 def codon_index(dnaseq):
     codonlist=[]
     if len(dnaseq)%3 == 0:
@@ -45,10 +47,14 @@ def codon_index(dnaseq):
     return codonlist
     
 
+
+
 # If commonvar exists but the assembled sequences are not identical, 
 def seqMismatch(map2refseq, denovoseq):
     print('find the discrepancy')
     
+
+
 
 def findFrameshift(mutations): #pass a mutation list into this function
     # Frameshifts should appear in the denovo_var field
@@ -86,6 +92,8 @@ def findFrameshift(mutations): #pass a mutation list into this function
 # https://towardsdatascience.com/starting-off-in-bioinformatics-turning-dna-sequences-into-protein-sequences-c771dc20b89f
 
 
+
+
 def translate(dna):
     from reference_sequences import protein
     dna = dna.upper()
@@ -100,62 +108,117 @@ def translate(dna):
     return prot_seq
 
 
+
+# if comparing map2ref and denovoseq, pass denovoseq as sequence 1
+def simple_alignment(seq1, seq2):
+    from Bio import pairwise2
+    gap_open_penalty = -2
+    gap_extend_penalty = -1
+    alignment = pairwise2.align.globalxs(seq1, seq2, gap_open_penalty, gap_extend_penalty)
+    while len(alignment) > 1:
+        if gap_open_penalty < -10: # something is clearly very wrong with the data at this point
+                break
+        gap_open_penalty -= 1
+        gap_extend_penalty -=0.5
+        alignment = pairwise2.align.globalxs(seq1, seq2, gap_open_penalty, gap_extend_penalty)
+        
+        refseq = alignment[0].seqA # calling each named tuple item returned by pairwise2
+        testseq = alignment[0].seqB
+        
+        alignment_comment = ''
+        
+        for j in range(len(refseq)):
+    
+            if refseq[j] != testseq[j]:
+                if testseq[j] == '-':
+                    alignment_comment += str(refseq[j]).lower() + str(j+1) + 'del, '
+                elif refseq[j] == '-': # and testseq[j+1] == refseq[j]:
+                        alignment_comment += ' ins' + str(j+1) + ', ' #str(refseq[j+1]).lower() + str(j+2) + ', '
+                else:
+                    alignment_comment += 'snp-' + str(refseq[j]).lower() + str(j+1) + str(testseq[j]).lower() + ', '
+            
+    print(alignment_comment)
+    return alignment_comment
+
+
+
 ### find single nucleotide polymorphisms
 # exclude the intended SDM codons
 def polymorphisms(scaffold, denovoseq, goodMutations):
     import re
+
     aanumRegex = re.compile(r'[A-Z](\d+)') # search pattern for residue number
     
-    # scaffold is a category number, so get the dna sequence and make a codon index
-    from reference_sequences import scaffold_dna
-    ref_dna = scaffold_dna[str(scaffold)] # get the reference dna sequence
-    ref_dna_codons = codon_index(ref_dna) # break the sequence into codons
-    sdm_sites = aanumRegex.findall(goodMutations) # find the sdm residue numbers to evaluate later
-    
-    # make a list of sdm base numbers to exclude from further analysis
-    sdm_bases = []
-    if sdm_sites is not None:
-        for i in range(len(sdm_sites)):
-            codonbasenum = 3*int(sdm_sites[i])
-            sdm_bases.append(codonbasenum-2)
-            sdm_bases.append(codonbasenum-1)
-            sdm_bases.append(codonbasenum)
+    if goodMutations is not None:
+        
+        from reference_sequences import scaffold_dna
+        ref_dna = scaffold_dna[str(scaffold)] # get the reference dna sequence
+        ref_dna_codons = codon_index(ref_dna) # break the sequence into codons
+        
+        numGoodMuts = len(goodMutations)
+        sdm_bases = []
+        for k in range (0, numGoodMuts):
+            sdm_sites = aanumRegex.findall(goodMutations[k]) # find the sdm residue numbers to evaluate later
+                
+        # since this is looking for miscellaneous dna polymorphisms, 
+        # make a list of sdm base numbers to exclude from analysis
+            if sdm_sites is not None:
+                for i in range(len(sdm_sites)):
+                    codonbasenum = 3*int(sdm_sites[i])
+                    sdm_bases.append(codonbasenum-2)
+                    sdm_bases.append(codonbasenum-1)
+                    sdm_bases.append(codonbasenum)
+                
+            # print(sdm_bases)
+        
+            # trim scaffold sequence at 3' end if necessary (scaffold probably has the stop codon, while denovoseq omits it)
+            if len(ref_dna) > len(denovoseq):
+                while len(ref_dna) > len(denovoseq):
+                    ref_dna = ref_dna[:len(ref_dna)-1]
+                    
             
-        print(sdm_bases)
-    
-    # trim scaffold sequence at 3' end if necessary (scaffold probably has the stop codon, while denovoseq omits it)
-    if len(ref_dna) > len(denovoseq):
-        while len(ref_dna) > len(denovoseq):
-            ref_dna = ref_dna[:len(ref_dna)-1]
+            # create the alignment
+            from Bio import pairwise2
+            gap_open_penalty = -2
+            gap_extend_penalty = -1
+            alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
+            while len(alignment) > 1:
+                if gap_open_penalty < -10: # something is clearly very wrong with the data at this point
+                        break
+                gap_open_penalty -= 1
+                gap_extend_penalty -=0.5
+                alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
             
-    
-    # create the alignment
-    from Bio import pairwise2
-    gap_open_penalty = -2
-    gap_extend_penalty = -1
-    alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
-    while len(alignment) > 1:
-        if gap_open_penalty < -50: # something is clearly very wrong with the data at this point
-                break
-        gap_open_penalty -= 1
-        gap_extend_penalty -=0.5
-        alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
-    
-    refseq = alignment[0].seqA
-    testseq = alignment[0].seqB
-    
-    polymorphism_comment = ''
-    
-    for j in range(len(refseq)):
-        if j+1 not in sdm_bases:
-            if refseq[j] != testseq[j]:
-                if testseq[j] == '-':
-                    polymorphism_comment += str(refseq[j]).lower() + str(j+1) + 'del, '
-                elif refseq[j] == '-' and testseq[j+1] == refseq[j]:
-                    polymorphism_comment += ' ins' + str(j+1) + str(refseq[j+1]).lower() + str(j+2) + ', '
-                else:
-                    polymorphism_comment += 'snp-' + str(refseq[j]).lower() + str(j+1) + str(testseq[j]).lower() + ', '
+            refseq = alignment[0].seqA # calling each named tuple item returned by pairwise2
+            testseq = alignment[0].seqB
             
-    print(polymorphism_comment)
+            polymorphism_comment = ''
             
-    return alignment, polymorphism_comment
+            # comment the mutations
+            # due to ubiquity, some mutations are silenced. See reference_sequences
+            
+            from reference_sequences import suppressed_snps
+            # from cdb_globals import dna_mutlist
+            for j in range(len(refseq)):
+                if j+1 not in sdm_bases:
+                    if refseq[j] != testseq[j]:
+                        if testseq[j] == '-':
+                            mut_comment = str(refseq[j]).lower() + str(j+1) + 'del, '
+                            if mut_comment not in suppressed_snps:
+                                polymorphism_comment += mut_comment
+                            dna_mutlist.append(mut_comment)
+                        elif refseq[j] == '-': # and testseq[j+1] == refseq[j]:
+                            mut_comment = ' ins' + str(j+1) + ', '
+                            if mut_comment not in suppressed_snps:
+                                polymorphism_comment +=  mut_comment #str(refseq[j+1]).lower() + str(j+2) + ', '
+                            dna_mutlist.append(mut_comment)
+                        else:
+                            mut_comment = 'snp-' + str(refseq[j]).lower() + str(j+1) + str(testseq[j]).lower() + ', '
+                            if mut_comment not in suppressed_snps:
+                                polymorphism_comment += mut_comment
+                            dna_mutlist.append(mut_comment)
+                    
+            # print(polymorphism_comment)
+                    
+            # return alignment, polymorphism_comment
+            return polymorphism_comment
