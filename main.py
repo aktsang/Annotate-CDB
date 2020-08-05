@@ -70,7 +70,7 @@ results_wb = Workbook()
 results_ws0 = results_wb.active # the default active sheet
 results_ws1 = results_wb.create_sheet("Combos Renamed")
 results_ws2 = results_wb.create_sheet("Frameshifts")
-results_ws3 = results_wb.create_sheet("Ambiguous Sequences")
+results_ws3 = results_wb.create_sheet("Unidentical Sequences")
 results_ws4 = results_wb.create_sheet("Mutation Count")
 
 # intial values of the excel results summary
@@ -86,7 +86,7 @@ results_ws0['A2'].value = 'Combos Renamed'
 results_ws0['B2'].value = 'Combo mutation names that contained underscores or dashes, which were corrected to spaces.'
 results_ws0['A3'].value = 'Frameshifts'
 results_ws0['B3'].value = 'Frameshifts found in the master summary data.'
-results_ws0['A4'].value = 'Ambiguous Sequences'
+results_ws0['A4'].value = 'Mapped and Denovo Mismatch'
 results_ws0['B4'].value = 'Called mutations with mismatches between mapped and de novo assembly gene sequences.'
 results_ws0['A5'].value = 'Mutation Count'
 results_ws0['B5'].value = 'All non-SDM mutations found in the dataset.'
@@ -99,8 +99,9 @@ results_ws2['B1'].value = 'Frameshift identified'
 results_ws2['C1'].value = 'Comment'
 
 results_ws3['A1'].value = 'Construct'
-results_ws3['B1'].value = 'map2ref'
-results_ws3['C1'].value = 'denovo'
+results_ws3['B1'].value = 'common_var'
+results_ws3['C1'].value = 'map2ref'
+results_ws3['D1'].value = 'denovo'
 
 results_ws4['A1'].value = 'Total number of entries: '
 results_ws4['A2'].value = 'Number of constructs updated: '
@@ -204,8 +205,9 @@ for j in range(2, msrows):
                     # add to spreadsheet
                     results_ws3_row = results_ws3.max_row + 1
                     results_ws3['A' + str(results_ws3_row)].value = constructname
-                    results_ws3['B' + str(results_ws3_row)].value = map2refseq
-                    results_ws3['C' + str(results_ws3_row)].value = denovoseq
+                    results_ws3['B' + str(results_ws3_row)].value = commonvar
+                    results_ws3['C' + str(results_ws3_row)].value = map2refseq
+                    results_ws3['D' + str(results_ws3_row)].value = denovoseq
                     
                 ### Annotation functions
                 origComment = cdb[comments_col + str(cdbindex)].value
@@ -228,19 +230,12 @@ for j in range(2, msrows):
                     finalComment += other_polymorphisms
                         
                 cdb[comments_col + str(cdbindex)].value = finalComment
-                # Frameshifts with a commonvar are included in this annotation function. 
-                
-                
-                
-                
+
         
         else: # commonvar is None
         
             ### Frameshifts without a commonvar    
             origComment = cdb[comments_col + str(cdbindex)].value
-            
-            # compare the sequences provided to determine what happened (wild type?)
-        
         
             from sequence_funcs import findFrameshift
             frameshiftList = findFrameshift(denovovar)
@@ -296,9 +291,6 @@ for m in range(0, len(unique_muts)):
     results_ws4_row += 1
     results_ws4['A' + str(results_ws4_row)].value = unique_muts[m]
     results_ws4['B' + str(results_ws4_row)].value = occurrences
-        
-    
-    # tally residues found from degenerate mutagenesis
 
 results_ws4['B1'].value = j+1 # fill in the number of constructs processed. 
 results_ws4['B2'].value = constructs_updated # fill in the number of construct names changed

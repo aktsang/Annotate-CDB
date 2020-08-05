@@ -71,17 +71,34 @@ def findFrameshift(mutations): #pass a mutation list into this function
         for i in range(0, len(residues)-1):
             intervalList.append(int(residues[i+1])-int(residues[i]))
         
+        frameshiftBreak = 0 # gets incremented when a reside meets frameshift criteria. 
+        
+        frameshiftThreshold = 5 # when frameshiftBreak gets to this arbitrary threshold, 
+        # then this "trips" the frameshift condition True no matter what. This prevents other spaced 
+        # out mutations from nullifying the frameshift condition.
+        
+        frameshiftTrueList = [] # tracks whether frameshifts have been found yet. 
+        
         if len(intervalList) > 3: # search only mutation lists longer than 3 substitutions for frameshifts. Arbitrary threshold.
             for j in range(0, len(intervalList)):
                 if intervalList[j] < 3: # if the amino acids are less than 3 positions apart
+                    if len(frameshiftTrueList)  == 0: 
+                            firstFrameshiftSite = mutNames[j] # store the first site of the frameshift.
                     frameshift = True
+                    frameshiftBreak += 1
+                    frameshiftTrueList.append(1)
+                
+                elif frameshiftBreak >= 5:
+                    frameshift = True
+                
                 else:
                     frameshift = False
-                    break
+                    frameshiftBreak -= 1
+                    
         
         # return frameshift as Boolean, and the first found mutation of the frameshift. 
-        if frameshift == True:
-            return frameshift, mutNames[0]
+        if frameshiftBreak >= 5 or frameshift == True:
+            return frameshift, firstFrameshiftSite
     
     
 ### DNA translation dictionary and function
@@ -153,7 +170,7 @@ def polymorphisms(scaffold, denovoseq, goodMutations):
         
         from reference_sequences import scaffold_dna
         ref_dna = scaffold_dna[str(scaffold)] # get the reference dna sequence
-        ref_dna_codons = codon_index(ref_dna) # break the sequence into codons
+        # ref_dna_codons = codon_index(ref_dna) # break the sequence into codons
         
         numGoodMuts = len(goodMutations)
         sdm_bases = []
@@ -172,9 +189,9 @@ def polymorphisms(scaffold, denovoseq, goodMutations):
             # print(sdm_bases)
         
             # trim scaffold sequence at 3' end if necessary (scaffold probably has the stop codon, while denovoseq omits it)
-            if len(ref_dna) > len(denovoseq):
-                while len(ref_dna) > len(denovoseq):
-                    ref_dna = ref_dna[:len(ref_dna)-1]
+            # if len(ref_dna) > len(denovoseq):
+            #     while len(ref_dna) > len(denovoseq):
+            #         ref_dna = ref_dna[:len(ref_dna)-1] 
                     
             
             # create the alignment
@@ -199,7 +216,7 @@ def polymorphisms(scaffold, denovoseq, goodMutations):
             
             from reference_sequences import suppressed_snps
             # from cdb_globals import dna_mutlist
-            for j in range(len(refseq)):
+            for j in range(len(refseq)-6): # denovo assembly gives variable length toward the end, ignore these bases. 
                 if j+1 not in sdm_bases:
                     if refseq[j] != testseq[j]:
                         if testseq[j] == '-':
@@ -218,7 +235,8 @@ def polymorphisms(scaffold, denovoseq, goodMutations):
                                 polymorphism_comment += mut_comment
                             dna_mutlist.append(mut_comment)
                     
-            # print(polymorphism_comment)
+            # check polymorphism comment for a frameshift like condition and limit it to first site
+            
                     
             # return alignment, polymorphism_comment
             return polymorphism_comment
