@@ -59,7 +59,7 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
                 newComment += mutation + ', ' + mutCodon + ', ' + seqlength  + ', '
             else:
                 newComment += mutation + ', ' + mutCodon + ', ' + seqlength + ', ' \
-                    + 'start-base ' + str(start_base) + ', ' + 'end-base ' + str(end_base)
+                    + 'start-base ' + str(start_base) + ', ' + 'end-base ' + str(end_base) + ', '
         
     if extraMutations is not None:
         numExtraMuts = len(extraMutations)
@@ -69,29 +69,7 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
             xresidueNum = aanumRegex.findall(xmutation) # finds the residue number (e.g. 392) as list
             xresidueIndex = int(xresidueNum[0]) # convert to integer
             
-            # xmutCodon = denovoseq_codon_index[xresidueIndex-1] # -1 because python starts counting at zero
-            
-            #if len(denovoseq) == len(scaffoldSeq): # a simple codon change, seq length is the same
-                # 
-            # determine amino acid substitutions
-            # determine frameshifts
-            # determine snps
-            # determine indels
-            
             newComment += 'sub-' + xmutation + ', '
-            
-            # find index of extra mutation
-            
-            # get original residue by xresidueNuym
-            
-    # Check for a frameshift in denovovar
-    # move these instructions to main? 
-    # from sequence_funcs import findFrameshift
-    # frameshiftList = findFrameshift(denovovar)
-    
-    # if frameshiftList is not None:
-    #     if frameshiftList[0] == True:
-    #         newComment += 'frameshift-' + frameshiftList[1] + ', '
         
     finalComment = origComment + newComment
     return finalComment

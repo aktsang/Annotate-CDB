@@ -28,11 +28,11 @@ from cdb_globals import *
 
 ### file inputs
 
-# location of sequencing results file from Quantitative Genomics
-ms_file_loc = '/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/master_summary_QG_20190116_copy.xlsx'
+# # location of sequencing results file from Quantitative Genomics
+# ms_file_loc = '/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/master_summary_QG_20190116_copy.xlsx'
 
-#location of CDB file
-cdb_database_loc = '/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/ConstructDB_combined_testing.xlsx'
+# #location of CDB file
+# cdb_database_loc = '/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/ConstructDB_combined_testing.xlsx'
 
 # information on the master_summary from Quantitative Genomics
 samplename_col = 'A'
@@ -70,14 +70,16 @@ results_wb = Workbook()
 results_ws0 = results_wb.active # the default active sheet
 results_ws1 = results_wb.create_sheet("Combos Renamed")
 results_ws2 = results_wb.create_sheet("Frameshifts")
-results_ws3 = results_wb.create_sheet("Unidentical Sequences")
+results_ws3 = results_wb.create_sheet("Non-identical Sequences")
 results_ws4 = results_wb.create_sheet("Mutation Count")
+results_ws5 = results_wb.create_sheet("Unidentified Entries")
 
 # intial values of the excel results summary
 results_ws1_row = 1
 results_ws2_row = 1
 results_ws3_row = 1
 results_ws4_row = 4
+results_ws5_row = 1
 
 results_ws0.title = "Summary"
 results_ws0['A1'].value = 'Worksheet name'
@@ -90,6 +92,8 @@ results_ws0['A4'].value = 'Mapped and Denovo Mismatch'
 results_ws0['B4'].value = 'Called mutations with mismatches between mapped and de novo assembly gene sequences.'
 results_ws0['A5'].value = 'Mutation Count'
 results_ws0['B5'].value = 'All non-SDM mutations found in the dataset.'
+results_ws0['A6'].value = 'Unidentified entries'
+results_ws0['B6'].value = 'Entries in the master summary not found in the CDB'
 
 results_ws1['A1'].value = 'Old construct name'
 results_ws1['B1'].value = 'New construct name'
@@ -102,11 +106,17 @@ results_ws3['A1'].value = 'Construct'
 results_ws3['B1'].value = 'common_var'
 results_ws3['C1'].value = 'map2ref'
 results_ws3['D1'].value = 'denovo'
+results_ws3['E1'].value = 'map2ref sequence features vs denovo'
 
 results_ws4['A1'].value = 'Total number of entries: '
 results_ws4['A2'].value = 'Number of constructs updated: '
 results_ws4['A4'].value = 'Mutation'
 results_ws4['B4'].value = 'Number of constructs containing'
+
+results_ws5['A1'].value = 'Sample'
+results_ws5['B1'].value = 'Plate'
+results_ws5['C1'].value = 'Well'
+
 # the total number of constructs processed is added to the workbook at the end of the program. 
 
 # newNames_wb = Workbook()
@@ -146,16 +156,24 @@ for j in range(2, msrows):
     wellname = ms[well_col + str(j)].value # get well name from row j
     
     searchtext = platename + '_' + wellname # the plate_well we're looking for, e.g. A0123_A01
+    print('searchtext ' + searchtext)
 
     # Search the CDB list for the plate and well listing.
     for k in range(2, cdbrows):
+        pwmatchfound = 0
         pwmatch = platewellRegex.search(str(cdb[construct_loc_col + str(k)].value)) 
         if pwmatch is not None:
             cdb_loc_compare = pwmatch.group() # extract the text of the matching pattern
             if cdb_loc_compare == searchtext: # compare the matched text to the desired plate and well
-                #print('Found match for ' + searchtext + ' at index ' + str(k) + ' (' + cdb_loc_compare + ')')
+                pwmatchfound = 1
                 cdbindex = k # save the row number of this entry
                 break # exit cdb search loop when the entry is found. 
+                
+        if k == cdbrows and pwmatchfound == 0: # plate and well info were not found in the construct database list.
+            results_ws5_row += 1
+            results_ws5['A' + str(results_ws5_row)].value = ms[samplename_col + str(j)].value
+            results_ws5['B' + str(results_ws5_row)].value = ms[plate_col + str(j)].value
+            results_ws5['C' + str(results_ws5_row)].value = ms[well_col + str(j)].value
 
     
     ### Check for existing Sanger sequence
@@ -170,11 +188,16 @@ for j in range(2, msrows):
         denovovar = ms[denovo_var_col + str(j)].value
         commonvar = ms[common_var_col + str(j)].value
         
+        
         if commonvar is not None: # For now, only work on records with a called mutation
+        
+            print(constructname + ', (m)' + map2refvar + ', (d)' + denovovar + ', (c)' + commonvar)
             
             ### update name
             from updateMutants import updateMutations
             newconstructname = updateMutations(constructname, map2refvar, denovovar, commonvar)
+            
+            print(newconstructname)
             
             if newconstructname is not None:
                 cdb[samplename_col + str(cdbindex)].value = newconstructname[0]
@@ -196,18 +219,27 @@ for j in range(2, msrows):
                 seqident = compareSeq(map2refseq, denovoseq)
                 if seqident == True:
                     cdb[sequence_col + str(cdbindex)].value = denovoseq # if assembled sequences are identical, plug in denovo sequence
-                    # make the cell light blue
-                    cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="00e5ff")
+                    # make the cell yellow
+                    cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
                 else:
                     # common var called but sequences are different.
-                    # make the cell orange
-                    cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffbf00")
-                    # add to spreadsheet
+                    # make the cell blue
+                    cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="00e5ff")
+                    
+                    # plug the denovoseq into the cdb record
+                    cdb[sequence_col + str(cdbindex)].value = denovoseq
+                    
+                    # align the map2ref and denovo sequences
+                    from sequence_funcs import simple_alignment
+                    alignment_comment = simple_alignment(denovoseq, map2refseq)
+                    
+                    # add to results summary
                     results_ws3_row = results_ws3.max_row + 1
                     results_ws3['A' + str(results_ws3_row)].value = constructname
                     results_ws3['B' + str(results_ws3_row)].value = commonvar
                     results_ws3['C' + str(results_ws3_row)].value = map2refseq
                     results_ws3['D' + str(results_ws3_row)].value = denovoseq
+                    results_ws3['E' + str(results_ws3_row)].value = alignment_comment
                     
                 ### Annotation functions
                 origComment = cdb[comments_col + str(cdbindex)].value
@@ -230,6 +262,8 @@ for j in range(2, msrows):
                     finalComment += other_polymorphisms
                         
                 cdb[comments_col + str(cdbindex)].value = finalComment
+                
+
 
         
         else: # commonvar is None
@@ -295,9 +329,9 @@ for m in range(0, len(unique_muts)):
 results_ws4['B1'].value = j+1 # fill in the number of constructs processed. 
 results_ws4['B2'].value = constructs_updated # fill in the number of construct names changed
 
-cdb_file.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/construct-db_updated_test.xlsx')
+cdb_file.save(cdb_output_file)
 cdb_file.close()
-results_wb.save('/Users/tsanga/Documents/code/deepseq_update_cdb/testfiles/output/Results_Summary.xlsx')
+results_wb.save(results_summary_file)
 results_wb.close()
 master_summary_file.close()
 

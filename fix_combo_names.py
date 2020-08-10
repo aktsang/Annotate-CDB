@@ -22,6 +22,8 @@ Called by main.py
 import re
 
 def fixComboNames(constructname):
+    if constructname is None:
+        constructname = ''
     uscoreRegex = re.compile(r'([A-Z]\d+X_)+') # search pattern for mutation with underscore (e.g. N391X_T392X)
     dashRegex = re.compile(r'([A-Z]\d+X-)+') #search pattern for mutations separated by dashes (e.g. N391X-T392X)
     mutRegex = re.compile(r'[A-Z]\d+[A-Z]') # search pattern for any mutation (e.g. N391X, T293Y)
@@ -58,6 +60,8 @@ def fixComboNames(constructname):
             newname2 = name2.replace('-', ' ')
         
         newconstructname = name1 + newname2 + name3
+        
+        print(newconstructname)
         
         return newconstructname
 

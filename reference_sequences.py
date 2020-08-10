@@ -49,7 +49,14 @@ protein = {"TTT" : "F", "CTT" : "L", "ATT" : "I", "GTT" : "V",
            }
 
 
-# these mutations occur in so many 376 constructs that they are excluded from CDB comments to reduce noise. 
+# these mutations occur in so many constructs that they are excluded from CDB comments to reduce noise. 
 # they don't seem to affect sensor function, since 376.13 (one of the best ASAP hits) has these. 
 # the commas and spaces are important for matching. 
-suppressed_snps = ['snp-t87c, ', 'snp-t1203c, ', 'snp-c1204t, ', 'snp-t1206a, ', 'snp-c1207a, ']
+# used in the polymorphisms function (under sequence_funcs.py)
+
+suppressed_snps = {
+    
+    "376" : ['snp-t87c, ', 'snp-t1203c, ', 'snp-c1204t, ', 'snp-t1206a, ', 'snp-c1207a, '],
+    "421" : ['snp-t690c, ']
+    
+    }

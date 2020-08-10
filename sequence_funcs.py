@@ -10,12 +10,15 @@ Called by main.py, updateMutants.py, and annotations.py
 from cdb_globals import *
 
 def checkSequence(seqtext):
-    seqlen = len(seqtext)
+    if seqtext is not None:
+        seqlen = len(seqtext)
+    else:
+        seqlen = 1
+        
     if seqlen > 1:
         seqfound = True
     else:
         seqfound = False
-    #print(seqlen)
     return seqfound  # Boolean out
 
 
@@ -45,14 +48,7 @@ def codon_index(dnaseq):
         codonlist.append(dnaseq[i:i+3])
     
     return codonlist
-    
 
-
-
-# If commonvar exists but the assembled sequences are not identical, 
-def seqMismatch(map2refseq, denovoseq):
-    print('find the discrepancy')
-    
 
 
 
@@ -127,33 +123,33 @@ def translate(dna):
 
 
 # if comparing map2ref and denovoseq, pass denovoseq as sequence 1
-def simple_alignment(seq1, seq2):
+def simple_alignment(denovoseq, map2refseq):
     from Bio import pairwise2
     gap_open_penalty = -2
     gap_extend_penalty = -1
-    alignment = pairwise2.align.globalxs(seq1, seq2, gap_open_penalty, gap_extend_penalty)
+    alignment = pairwise2.align.globalxs(denovoseq, map2refseq, gap_open_penalty, gap_extend_penalty)
     while len(alignment) > 1:
         if gap_open_penalty < -10: # something is clearly very wrong with the data at this point
                 break
         gap_open_penalty -= 1
         gap_extend_penalty -=0.5
-        alignment = pairwise2.align.globalxs(seq1, seq2, gap_open_penalty, gap_extend_penalty)
+        alignment = pairwise2.align.globalxs(denovoseq, map2refseq, gap_open_penalty, gap_extend_penalty)
         
-        refseq = alignment[0].seqA # calling each named tuple item returned by pairwise2
-        testseq = alignment[0].seqB
-        
-        alignment_comment = ''
-        
-        for j in range(len(refseq)):
+    refseq = alignment[0].seqA # calling each named tuple item returned by pairwise2
+    testseq = alignment[0].seqB
     
-            if refseq[j] != testseq[j]:
-                if testseq[j] == '-':
-                    alignment_comment += str(refseq[j]).lower() + str(j+1) + 'del, '
-                elif refseq[j] == '-': # and testseq[j+1] == refseq[j]:
-                        alignment_comment += ' ins' + str(j+1) + ', ' #str(refseq[j+1]).lower() + str(j+2) + ', '
-                else:
-                    alignment_comment += 'snp-' + str(refseq[j]).lower() + str(j+1) + str(testseq[j]).lower() + ', '
-            
+    alignment_comment = ''
+    
+    for j in range(len(refseq)):
+
+        if refseq[j] != testseq[j]:
+            if testseq[j] == '-':
+                alignment_comment += str(refseq[j]).lower() + str(j+1) + 'del, '
+            elif refseq[j] == '-': # and testseq[j+1] == refseq[j]:
+                    alignment_comment += ' ins' + str(j+1) + ', ' #str(refseq[j+1]).lower() + str(j+2) + ', '
+            else:
+                alignment_comment += 'snp-' + str(refseq[j]).lower() + str(j+1) + str(testseq[j]).lower() + ', '
+        
     print(alignment_comment)
     return alignment_comment
 
@@ -199,7 +195,7 @@ def polymorphisms(scaffold, denovoseq, goodMutations):
             gap_open_penalty = -2
             gap_extend_penalty = -1
             alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
-            while len(alignment) > 1:
+            while len(alignment) > 1: # run pairwise2 with increasing stringency while more than one alignment is returned
                 if gap_open_penalty < -10: # something is clearly very wrong with the data at this point
                         break
                 gap_open_penalty -= 1
@@ -221,17 +217,17 @@ def polymorphisms(scaffold, denovoseq, goodMutations):
                     if refseq[j] != testseq[j]:
                         if testseq[j] == '-':
                             mut_comment = str(refseq[j]).lower() + str(j+1) + 'del, '
-                            if mut_comment not in suppressed_snps:
+                            if mut_comment not in suppressed_snps[scaffold]:
                                 polymorphism_comment += mut_comment
-                            dna_mutlist.append(mut_comment)
+                            dna_mutlist.append(mut_comment) # tracking all mutations
                         elif refseq[j] == '-': # and testseq[j+1] == refseq[j]:
                             mut_comment = ' ins' + str(j+1) + ', '
-                            if mut_comment not in suppressed_snps:
+                            if mut_comment not in suppressed_snps[scaffold]:
                                 polymorphism_comment +=  mut_comment #str(refseq[j+1]).lower() + str(j+2) + ', '
                             dna_mutlist.append(mut_comment)
                         else:
                             mut_comment = 'snp-' + str(refseq[j]).lower() + str(j+1) + str(testseq[j]).lower() + ', '
-                            if mut_comment not in suppressed_snps:
+                            if mut_comment not in suppressed_snps[scaffold]:
                                 polymorphism_comment += mut_comment
                             dna_mutlist.append(mut_comment)
                     
