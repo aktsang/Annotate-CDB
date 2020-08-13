@@ -8,6 +8,7 @@ Created on Tue Jul 14 17:58:52 2020
 Called by main.py, updateMutants.py, and annotations.py
 """
 from cdb_globals import *
+import re
 
 def checkSequence(seqtext):
     if seqtext is not None:
@@ -33,6 +34,51 @@ def compareSeq(map2refseq, denovoseq):
         return False # more code to be written
     
 
+def compareSanger(constructname, commonvar):
+    mutRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+stop|[A-Z]\d+STOP')
+    
+    constructname_mutations = []
+    
+    # pass constructname through regex to find mutations
+    constructname_mutations = mutRegex.findall(constructname)
+    
+    # if commonvar contains asterisk, convert to 'STOP'
+    findasterisk = commonvar.find('*')
+    if findasterisk > -1:
+        commonvar = commonvar.replace('*', 'STOP')
+    
+    # concatenate constructname mutations into same format as commonvar
+    sangervar = ''
+    if len(constructname_mutations) > 0:
+        for i in range(len(constructname_mutations)):
+            # read constructname for lowercase stops, convert to upper
+            findlowerstop = constructname_mutations[i].find('stop')
+            print(findlowerstop)
+            if findlowerstop > -1:
+                constructname_mutations[i] = constructname_mutations[i].upper()
+                
+            if i < len(constructname_mutations)-1:
+                sangervar += constructname_mutations[i] + ','
+            else:
+                sangervar += constructname_mutations[i]
+                
+                    # now compare them
+        if sangervar == commonvar:
+            return sangervar, True
+        else:
+            return sangervar, False
+                
+        
+    else:
+        return None
+            
+    print(constructname_mutations)
+    print(commonvar)
+    print(sangervar)
+        
+
+    
+    
 
 
 def codon_index(dnaseq):

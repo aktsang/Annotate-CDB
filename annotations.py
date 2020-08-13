@@ -74,3 +74,4 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
     finalComment = origComment + newComment
     return finalComment
 
+

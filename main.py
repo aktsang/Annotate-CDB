@@ -73,6 +73,7 @@ results_ws2 = results_wb.create_sheet("Frameshifts")
 results_ws3 = results_wb.create_sheet("Non-identical Sequences")
 results_ws4 = results_wb.create_sheet("Mutation Count")
 results_ws5 = results_wb.create_sheet("Unidentified Entries")
+results_ws6 = results_wb.create_sheet("Sanger Sequenced")
 
 # intial values of the excel results summary
 results_ws1_row = 1
@@ -80,6 +81,7 @@ results_ws2_row = 1
 results_ws3_row = 1
 results_ws4_row = 4
 results_ws5_row = 1
+results_ws6_row = 1
 
 results_ws0.title = "Summary"
 results_ws0['A1'].value = 'Worksheet name'
@@ -94,6 +96,8 @@ results_ws0['A5'].value = 'Mutation Count'
 results_ws0['B5'].value = 'All non-SDM mutations found in the dataset.'
 results_ws0['A6'].value = 'Unidentified entries'
 results_ws0['B6'].value = 'Entries in the master summary not found in the CDB'
+results_ws0['A7'].value = 'Sanger Sequenced'
+results_ws0['B7'].value = 'Clones with an existing Sanger Sequence, therefore record not updated'
 
 results_ws1['A1'].value = 'Old construct name'
 results_ws1['B1'].value = 'New construct name'
@@ -116,6 +120,12 @@ results_ws4['B4'].value = 'Number of constructs containing'
 results_ws5['A1'].value = 'Sample'
 results_ws5['B1'].value = 'Plate'
 results_ws5['C1'].value = 'Well'
+
+results_ws6['A1'].value = 'Construct name'
+results_ws6['B1'].value = 'Sanger Call'
+results_ws6['C1'].value = 'Deep Sequencing Call'
+results_ws6['D1'].value = 'Mutations Identical?'
+results_ws6['E1'].value = 'Clone Location'
 
 # the total number of constructs processed is added to the workbook at the end of the program. 
 
@@ -263,6 +273,7 @@ for j in range(2, msrows):
                         
                 cdb[comments_col + str(cdbindex)].value = finalComment
                 
+                
 
 
         
@@ -276,6 +287,8 @@ for j in range(2, msrows):
             if frameshiftList is not None:
                 if frameshiftList[0] == True:
                     finalComment = origComment + ': frameshift-' + frameshiftList[1] + ', ' # simply states the residue at which the frameshift starts.
+                    cdb[comments_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
+                    constructs_updated += 1
             else:
                 finalComment = origComment
                     
@@ -306,10 +319,39 @@ for j in range(2, msrows):
     
     
     elif seqFound == True: # found a Sanger sequence, don't modify to CDB record
+    
         # TESTING ONLY - color the unchanged construct records green
         cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
         cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
+        
+        constructname = cdb[samplename_col + str(cdbindex)].value
+        # map2refvar = ms[map2ref_var_col + str(j)].value
+        # denovovar = ms[denovo_var_col + str(j)].value
+        commonvar = ms[common_var_col + str(j)].value
+        
+        results_ws6_row += 1
+        
+        
+        results_ws6['A' + str(results_ws6_row)].value = constructname
+        
+        if commonvar is not None:
+            from sequence_funcs import compareSanger
+            sanger_muts = compareSanger(constructname, commonvar)
+            if sanger_muts is not None:
+                results_ws6['B' + str(results_ws6_row)].value = sanger_muts[0]
+                if sanger_muts[1] == True:
+                    results_ws6['D' + str(results_ws6_row)].value = 1
+                    results_ws6['D' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "00ff00")
+                    
+                else:
+                    results_ws6['D' + str(results_ws6_row)].value = 0
+                    results_ws6['D' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ff9900")
+
+            results_ws6['C' + str(results_ws6_row)].value = commonvar
+        
+        results_ws6['E' + str(results_ws6_row)].value = searchtext
             
+        
         
 # tally dna mutations in dna_mutlist
 

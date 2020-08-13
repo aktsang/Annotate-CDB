@@ -17,6 +17,7 @@ def updateMutations(constructname, map2refvar, denovovar, commonvar):
     
     mutRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+\*') # search pattern for any mutation (e.g. N391X, T293Y, L405*)
     aaRegex = re.compile(r'[A-Z]\d+') # search pattern for residue number
+    stopRegex = re.compile(r'\*') # search for asterisk stop notation
     
 # Look for a Sanger sequence and mutation in CDB. If it exists, do nothing to the clone name
     print('UPDATE MUTATIONS')    
@@ -29,6 +30,13 @@ def updateMutations(constructname, map2refvar, denovovar, commonvar):
         cname_match = mutRegex.findall(constructname) # get list of mutations in CDB
         commonvar_match = mutRegex.findall(commonvar) # get list of mutations called by DeepSeq
         
+        # convert '*' characters to 'STOP'
+        for q in range(len(commonvar_match)):
+            find_asterisk = stopRegex.search(commonvar_match[q])
+            if find_asterisk is not None:
+                if find_asterisk.group() == '*':
+                    commonvar_match[q] = commonvar_match[q].replace('*', 'STOP')
+                    
         print(cname_match)
         print(commonvar_match)
         
@@ -44,24 +52,40 @@ def updateMutations(constructname, map2refvar, denovovar, commonvar):
             name1 = constructname[:firstMut]
             name2 = constructname[firstMut:lastMutChar]
             name3 = constructname[lastMutChar:]
+            
+            newname2 = name2
         
             ### Compare each residue from deep seq to each residue in cdb
             # Deep seq may find multiple mutations. Is any of them the one we expect? 
             
             cname_aa_match = aaRegex.findall(name2) # find residue numbers from name2 fragment of constructname
             commonvar_aa_match = aaRegex.findall(commonvar) # find residue numbers from commonvar
-        
-        
-            
-        
-        
+
             for r in range(0, num_ds_Matches): # for each deep seq identified mutation...
                 for s in range(0, len(cname_aa_match)): # for each construct db intended mutation...
+                    # print('r: ' + str(r) + ', ' + commonvar_match[r])
+                    # print('s: ' + str(s) + ', ' + cname_match[s])
                     if commonvar_aa_match[r] == cname_aa_match[s]: # if the residue number (e.g. L405) is the same...
-                        newname2 += commonvar_match[r] # add the deep seq identified mutation to the name.
+                        # newname2 += commonvar_match[r] + ' ' # add the deep seq identified mutation to the name.
+                        newname2 = newname2.replace(cname_match[s], commonvar_match[r])
+                        # print(newname2)
                         mutList.append(commonvar_match[r]) # store all the deep seq identified mutations in mutList
-                    else:
-                        miscMutList.append(commonvar_match[r]) # store all the deep seq identified mutations in mutList
+                    
+                        # if r < len(commonvar_aa_match)-1:
+                        #     # newname2 += commonvar_match[r] + ' ' # add the deep seq identified mutation to the name.
+                        #     newname2 = newname2.replace(cname_match[s], commonvar_match[r])
+                        #     print(newname2)
+                        #     mutList.append(commonvar_match[r]) # store all the deep seq identified mutations in mutList
+                        # else: 
+                        #     # newname2 += commonvar_match[r]
+                        #     newname2 = newname2.replace(cname_match[s], commonvar_match[r])
+                        #     print(newname2)
+                        #     mutList.append(commonvar_match[r])
+                                        
+            # 2nd loop to check against mutList, everything else goes to miscMutList
+            for t in range(0, num_ds_Matches):
+                if commonvar_match[t] not in mutList:
+                    miscMutList.append(commonvar_match[t]) # store all the deep seq identified mutations in miscMutList
                         
             if len(newname2) > 1:
                 newconstructname = name1 + newname2 + name3 # if newname2 was changed then create a new construct name. 
@@ -71,7 +95,7 @@ def updateMutations(constructname, map2refvar, denovovar, commonvar):
             return newconstructname, mutList, miscMutList
         
         else: 
-            # no SDM sites were indicated in the constructname, so just return 
+            # if no SDM sites were indicated in the constructname, just return 
             # everything in the miscMutList
             for t in range(0, num_ds_Matches):
                 miscMutList.append(commonvar_match[t])
