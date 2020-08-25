@@ -34,18 +34,47 @@ def compareSeq(map2refseq, denovoseq):
         return False # more code to be written
     
 
-def compareSanger(constructname, commonvar):
-    mutRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+stop|[A-Z]\d+STOP')
+def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold):
+    mutRegex = re.compile(r'[A-Z]\d+[A-Z]') # original mutation regex
+    # mutRegex = re.compile(r'[A-Z]\d+[A-Z]')
+    stopregex = re.compile(r'[A-Z]\d+STOP')
+    asteriskregex = re.compile(r'[A-Z]\d+\*')
+    origRegex = re.compile(r'([A-Z]\d+)[A-Z]') # original residue regex
+    indexRegex = re.compile(r'[A-Z](\d+)') # residue number regex
     
     constructname_mutations = []
     
     # pass constructname through regex to find mutations
-    constructname_mutations = mutRegex.findall(constructname)
-    
+    if 'STOP' in constructname:
+        constructname_stops = stopregex.findall(constructname) #mutRegex will find 'T559STOP' as 'T559S', so need to clear out stops first.
+        for h in range(len(constructname_stops)): # delete stop mutations
+            temp_constructname = constructname.replace(constructname_stops[h], '')
+        
+        # find all non-stop mutations
+        constructname_mutations = mutRegex.findall(temp_constructname) # find all mutations except stops
+        
+        for g in range(len(constructname_stops)):
+            constructname_mutations.append(constructname_stops[h])
+    else:
+        constructname_mutations = mutRegex.findall(constructname)
+        
+    commonvarMut = []
     # if commonvar contains asterisk, convert to 'STOP'
-    findasterisk = commonvar.find('*')
-    if findasterisk > -1:
-        commonvar = commonvar.replace('*', 'STOP')
+    if commonvar is not None:
+        findasterisk = commonvar.find('*')
+        if findasterisk > -1:
+            commonvar = commonvar.replace('*', 'STOP')
+            commonvarMut_stop = stopregex.findall(commonvar)
+            for f in range(len(commonvarMut_stop)):
+                temp_commonvar = commonvar.replace(commonvarMut_stop[f], '')
+            
+            commonvarMut = mutRegex.findall(temp_commonvar)
+            
+            for e in range(len(commonvarMut_stop)):
+                commonvarMut.append(commonvarMut_stop[e])
+        else:
+            commonvarMut = mutRegex.findall(commonvar)
+    else: commonvarMut = []
     
     # concatenate constructname mutations into same format as commonvar
     sangervar = ''
@@ -53,7 +82,7 @@ def compareSanger(constructname, commonvar):
         for i in range(len(constructname_mutations)):
             # read constructname for lowercase stops, convert to upper
             findlowerstop = constructname_mutations[i].find('stop')
-            print(findlowerstop)
+            # print(findlowerstop)
             if findlowerstop > -1:
                 constructname_mutations[i] = constructname_mutations[i].upper()
                 
@@ -62,17 +91,119 @@ def compareSanger(constructname, commonvar):
             else:
                 sangervar += constructname_mutations[i]
                 
-                    # now compare them
-        if sangervar == commonvar:
-            return sangervar, True
+        # # get map2refFound and denovoFound (the found mutations from sequence)
+        # map2refTranslation = translate(map2refseq) # translate the dna sequences provided
+        # denovoTranslation = translate(denovoseq)
+        
+        # # get the position(s) of interest from constructname
+        # positions = indexRegex.findall(constructname)
+        # # get the original residue (e.g. A123) from constructname
+        # origResidue = origRegex.findall(constructname)
+        
+        # map2refFound = [] # stores individual mutation residue letters (e.g. A, Y, T)
+        # denovoFound = []
+        # map2refFoundMut = [] # stores the concatenated new mutation  (e.g. L330A)
+        # denovoFoundMut = []
+    map2refString = ''
+    denovoString = ''
+        
+    foundMutations = findMutations(scaffold, map2refseq, denovoseq)
+        
+    map2refMut = foundMutations[0]
+    denovoMut = foundMutations[1]
+        
+    # create spreadsheet strings
+    for i in range(len(map2refMut)):
+        if i < len(map2refMut)-1:
+            map2refString += map2refMut[i] + ','
         else:
-            return sangervar, False
+            map2refString += map2refMut[i]
+        
+    for j in range(len(denovoMut)):
+        if j < len(denovoMut)-1:
+            denovoString += denovoMut[j] + ','
+        else:
+            denovoString += denovoMut[j]
+        
+        # if len(positions) > 0:
+        # # for each position id, find the mutation from map2refTranslation and denovoTranslation
+        #     for i in range(0, len(positions)):
+        #         aaindex = int(positions[i])
+        #         map2refFound.append(map2refTranslation[aaindex-1]) # stores the amino acid residue letter
+        #         denovoFound.append(denovoTranslation[aaindex-1])
+            
+        #     for j in range(0, len(map2refFound)):
+        #         map2refNewMut = origResidue[j] + str(map2refFound[j])
+        #         map2refFoundMut.append(map2refNewMut)
                 
+        #         # create string for spreadsheet
+        #         if j < len(map2refFound) -1:
+        #             map2refFoundString += origResidue[j] + str(map2refFound[j]) + ','
+        #         else:
+        #             map2refFoundString += origResidue[j] + str(map2refFound[j])
+                
+        #     for k in range(0, len(denovoFound)):
+        #         denovoNewMut = origResidue[j] + str(map2refFound[j])
+        #         denovoFoundMut.append(map2refNewMut)
+        #         if k < len(denovoFound) - 1:
+        #             denovoFoundString += origResidue[k] + str(denovoFound[k]) + ','
+        #         else:
+        #             denovoFoundString += origResidue[k] + str(denovoFound[k])
+                    
+    if commonvar is None and map2refMut == denovoMut:
+        commonvarMut = denovoMut
+    
+    print(commonvarMut)
+    print(denovoMut)
+        
+    
+    if commonvar is not None:
+        
+        if len(constructname_mutations) > 1:
+            for d in range(len(constructname_mutations)):
+                if constructname_mutations[d] in map2refMut or constructname_mutations[d] in denovoMut:
+                    print("condition 1a - combo")
+                    return sangervar, True, map2refString, denovoString
+                else: 
+                    return sangervar, False, map2refString, denovoString
+        elif sangervar == map2refString or sangervar == denovoString or sangervar == commonvar:
+            print("condition 1b - combo")
+            return sangervar, True, map2refString, denovoString
+        
+        # these evaluations are good for single mutations
+        if sangervar in commonvarMut:
+            print('condition 1')
+            return sangervar, True, map2refString, denovoString
+        else:
+            print('condition 2')
+            return sangervar, False, map2refString, denovoString
+        
+    # where commonvar is None
+    elif sangervar in map2refMut or sangervar in denovoMut:
+        print('condition 3')
+        return sangervar, True, map2refString, denovoString
+    
+    elif len(constructname_mutations) > 1:
+        
+        for d in range(len(constructname_mutations)):
+            if constructname_mutations[d] in map2refMut or constructname_mutations[d] in denovoMut:
+                print('condition 4')
+                return sangervar, True, map2refString, denovoString
+            else: 
+                return sangervar, False, map2refString, denovoString
+        
+        
         
     else:
-        return None
+        print('condition 5')
+        return sangervar, False, map2refString, denovoString
+        
+    
             
+    print('COMPARE SANGER')
     print(constructname_mutations)
+    print(map2refMut)
+    print(denovoMut)
     print(commonvar)
     print(sangervar)
         
@@ -96,6 +227,111 @@ def codon_index(dnaseq):
     return codonlist
 
 
+
+def findMutations(scaffold, map2refseq, denovoseq):
+    #
+    # get scaffold sequence from scaffold number input
+    from reference_sequences import scaffold_protein
+    scaffold_prot_seq = scaffold_protein[scaffold]
+    
+    # translate the sequences
+    map2refTranslation = translate(map2refseq)
+    denovoTranslation = translate(denovoseq)
+    
+    # align the map2ref sequences
+    from Bio import pairwise2
+    gap_open_penalty = -1
+    gap_extend_penalty = -0.5
+    # full length alignment
+    if len(map2refTranslation) > 0.95 * len(scaffold_prot_seq):
+        map2refAlignment = pairwise2.align.globalxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+        while len(map2refAlignment) > 1 or gap_open_penalty > -10: 
+            gap_open_penalty -= 1
+            gap_extend_penalty -= 1
+            map2refAlignment = pairwise2.align.globalxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+            print('Global: Trying gap penalty ' + str(gap_open_penalty))
+            
+            if gap_open_penalty <= -10: # break and go to local alignment
+                gap_penalty_break = 1
+                break
+        
+        if gap_penalty_break == 1:
+            map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+            while len(map2refAlignment) > 1:
+                gap_open_penalty -= 1
+                gap_extend_penalty -= 1
+                map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+                print('Local: Trying gap penalty ' + str(gap_open_penalty))
+            
+    
+    else: # partial length alignment
+        map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+        while len(map2refAlignment) > 1:
+            gap_open_penalty -= 1
+            gap_extend_penalty -= 1
+            map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+            print('Local: Trying gap penalty ' + str(gap_open_penalty))
+            
+        
+    # align the denovo sequences
+    from Bio import pairwise2
+    gap_open_penalty = -1
+    gap_extend_penalty = -0.5
+    # full length alignment
+    if len(denovoTranslation) > 0.95 * len(scaffold_prot_seq):
+        denovoAlignment = pairwise2.align.globalxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
+        while len(denovoAlignment) > 1 or gap_open_penalty > -10:
+            gap_open_penalty -= 1
+            gap_extend_penalty -= 1
+            denovoAlignment = pairwise2.align.globalxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
+            print('Global: Trying gap penalty ' + str(gap_open_penalty))
+            
+            if gap_open_penalty <= -10: # break and go to local alignment
+                gap_penalty_break = 1
+                break
+            
+        if gap_penalty_break == 1:
+            denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
+            while len(denovoAlignment) > 1:
+                gap_open_penalty -= 1
+                gap_extend_penalty -= 1
+                denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
+                print('Local: Trying gap penalty ' + str(gap_open_penalty))
+    
+    else: # partial length alignment
+        denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
+        while len(denovoAlignment) > 1:
+            gap_open_penalty -= 1
+            gap_extend_penalty -= 1
+            denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
+            print('Local: Trying gap penalty ' + str(gap_open_penalty))
+    
+    map2refseqA = map2refAlignment[0].seqA
+    map2refseqB = map2refAlignment[0].seqB
+    
+    denovoseqA = denovoAlignment[0].seqA
+    denovoseqB = denovoAlignment[0].seqB
+    
+    map2refMut = []
+    denovoMut = []
+    
+    for i in range(len(map2refTranslation)):
+        if map2refseqA[i] != map2refseqB[i]:
+            if map2refseqB[i] == '*':
+                mutation = map2refseqA[i] + str(i+1) + 'STOP'
+            else:
+                mutation = map2refseqA[i] + str(i+1) + map2refseqB[i]
+            map2refMut.append(mutation)
+            
+    for i in range(len(denovoTranslation)):
+        if denovoseqA[i] != denovoseqB[i]:
+            if denovoseqB[i] == '*':
+                mutation = denovoseqA[i] + str(i+1) + 'STOP'
+            else:
+                mutation = denovoseqA[i] + str(i+1) + denovoseqB[i]
+            denovoMut.append(mutation)
+            
+    return map2refMut, denovoMut
 
 
 def findFrameshift(mutations): #pass a mutation list into this function
@@ -160,9 +396,15 @@ def translate(dna):
     
     for i in range(0, len(dna)-3+len(dna)%3, 3):
         codon = dna[i:i+3]
-        prot_seq += protein[dna[i:i+3]]
-        if protein[codon] == "*":
-            break
+        if codon.find('N') > -1: # can occur where nucelotide sequence is missing bases, 'n' gets filled in. 
+            prot_seq += 'x'
+        else:
+            prot_seq += protein[dna[i:i+3]]
+            
+            if protein[codon] == "*" or i > len(dna)-3:
+                break
+            
+        
             
     return prot_seq
 
@@ -175,7 +417,7 @@ def simple_alignment(denovoseq, map2refseq):
     gap_extend_penalty = -1
     alignment = pairwise2.align.globalxs(denovoseq, map2refseq, gap_open_penalty, gap_extend_penalty)
     while len(alignment) > 1:
-        if gap_open_penalty < -10: # something is clearly very wrong with the data at this point
+        if gap_open_penalty < -20: # something is clearly very wrong with the data at this point
                 break
         gap_open_penalty -= 1
         gap_extend_penalty -=0.5
@@ -242,7 +484,7 @@ def polymorphisms(scaffold, denovoseq, goodMutations):
             gap_extend_penalty = -1
             alignment = pairwise2.align.globalxs(ref_dna, denovoseq, gap_open_penalty, gap_extend_penalty)
             while len(alignment) > 1: # run pairwise2 with increasing stringency while more than one alignment is returned
-                if gap_open_penalty < -10: # something is clearly very wrong with the data at this point
+                if gap_open_penalty < -20: # something is clearly very wrong with the data at this point
                         break
                 gap_open_penalty -= 1
                 gap_extend_penalty -=0.5

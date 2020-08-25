@@ -74,6 +74,7 @@ results_ws3 = results_wb.create_sheet("Non-identical Sequences")
 results_ws4 = results_wb.create_sheet("Mutation Count")
 results_ws5 = results_wb.create_sheet("Unidentified Entries")
 results_ws6 = results_wb.create_sheet("Sanger Sequenced")
+results_ws7 = results_wb.create_sheet("Partial Length Sequences")
 
 # intial values of the excel results summary
 results_ws1_row = 1
@@ -82,6 +83,7 @@ results_ws3_row = 1
 results_ws4_row = 4
 results_ws5_row = 1
 results_ws6_row = 1
+results_ws7_row = 1
 
 results_ws0.title = "Summary"
 results_ws0['A1'].value = 'Worksheet name'
@@ -98,6 +100,8 @@ results_ws0['A6'].value = 'Unidentified entries'
 results_ws0['B6'].value = 'Entries in the master summary not found in the CDB'
 results_ws0['A7'].value = 'Sanger Sequenced'
 results_ws0['B7'].value = 'Clones with an existing Sanger Sequence, therefore record not updated'
+results_ws0['A8'].value = 'Partial Length Sequences'
+results_ws0['B8'].value = 'As title says'
 
 results_ws1['A1'].value = 'Old construct name'
 results_ws1['B1'].value = 'New construct name'
@@ -123,9 +127,17 @@ results_ws5['C1'].value = 'Well'
 
 results_ws6['A1'].value = 'Construct name'
 results_ws6['B1'].value = 'Sanger Call'
-results_ws6['C1'].value = 'Deep Sequencing Call'
-results_ws6['D1'].value = 'Mutations Identical?'
-results_ws6['E1'].value = 'Clone Location'
+results_ws6['C1'].value = 'map2ref call'
+results_ws6['D1'].value = 'denovo call'
+results_ws6['E1'].value = 'common call'
+results_ws6['F1'].value = 'Mutations Identical?'
+results_ws6['G1'].value = 'Clone Location'
+
+results_ws7['A1'].value = 'Construct name'
+results_ws7['B1'].value = 'De Novo sequence'
+results_ws7['C1'].value = 'Sequence Length'
+results_ws7['D1'].value = 'Clone Location'
+results_ws7['E1'].value = 'Comment'
 
 # the total number of constructs processed is added to the workbook at the end of the program. 
 
@@ -184,172 +196,203 @@ for j in range(2, msrows):
             results_ws5['A' + str(results_ws5_row)].value = ms[samplename_col + str(j)].value
             results_ws5['B' + str(results_ws5_row)].value = ms[plate_col + str(j)].value
             results_ws5['C' + str(results_ws5_row)].value = ms[well_col + str(j)].value
-
-    
-    ### Check for existing Sanger sequence
-    from sequence_funcs import checkSequence
-    seqFound = checkSequence(cdb[sequence_col + str(cdbindex)].value)
-    
-    if seqFound == False: # no Sanger sequence found, so update the record
-
+            
+    if pwmatchfound == 1:
         ### Name and Sequence update
         constructname = cdb[samplename_col + str(cdbindex)].value
         map2refvar = ms[map2ref_var_col + str(j)].value
         denovovar = ms[denovo_var_col + str(j)].value
         commonvar = ms[common_var_col + str(j)].value
+        # read map2ref and denovo sequences
+        map2refseq = ms[map2ref_seq_col + str(j)].value
+        if map2refseq is not None:
+            map2refseq = map2refseq.upper() # convert to all upper case
+        denovoseq = ms[denovo_seq_col + str(j)].value
+        if denovoseq is not None:
+            denovoseq = denovoseq.upper() # convert to all upper case
+        scaffold = str(cdb[categorynumber_col + str(cdbindex)].value)
+    
         
+        ### Check for existing Sanger sequence
+        from sequence_funcs import checkSequence
+        seqFound = checkSequence(cdb[sequence_col + str(cdbindex)].value)
         
-        if commonvar is not None: # For now, only work on records with a called mutation
-        
-            print(constructname + ', (m)' + map2refvar + ', (d)' + denovovar + ', (c)' + commonvar)
+        if seqFound == False: # no Sanger sequence found, so update the record
+     
             
-            ### update name
-            from updateMutants import updateMutations
-            newconstructname = updateMutations(constructname, map2refvar, denovovar, commonvar)
             
-            print(newconstructname)
+            if commonvar is not None: # For now, only work on records with a called mutation
             
-            if newconstructname is not None:
-                cdb[samplename_col + str(cdbindex)].value = newconstructname[0]
+                print(constructname + ', (m)' + map2refvar + ', (d)' + denovovar + ', (c)' + commonvar)
                 
-                # TESTING ONLY - color the changed construct names yellow
-                cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
-                cdb[comments_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
-                print('Name updated: ' + newconstructname[0])
-                constructs_updated += 1
+                ### update name
+                from updateMutants import updateMutations
+                newconstructname = updateMutations(constructname, map2refvar, denovovar, commonvar)
                 
-            ### udpate sequence
-                # read map2ref and denovo sequences
-                map2refseq = ms[map2ref_seq_col + str(j)].value
-                map2refseq = map2refseq.upper() # convert to all upper case
-                denovoseq = ms[denovo_seq_col + str(j)].value
-                denovoseq = denovoseq.upper() # convert to all upper case
-                # pass to function
-                from sequence_funcs import compareSeq
-                seqident = compareSeq(map2refseq, denovoseq)
-                if seqident == True:
-                    cdb[sequence_col + str(cdbindex)].value = denovoseq # if assembled sequences are identical, plug in denovo sequence
-                    # make the cell yellow
-                    cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
-                else:
-                    # common var called but sequences are different.
-                    # make the cell blue
-                    cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="00e5ff")
+                print(newconstructname)
+                
+                if newconstructname is not None:
+                    cdb[samplename_col + str(cdbindex)].value = newconstructname[0]
                     
-                    # plug the denovoseq into the cdb record
-                    cdb[sequence_col + str(cdbindex)].value = denovoseq
+                    # TESTING ONLY - color the changed construct names yellow
+                    cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
+                    cdb[comments_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
+                    print('Name updated: ' + newconstructname[0])
+                    constructs_updated += 1
                     
-                    # align the map2ref and denovo sequences
-                    from sequence_funcs import simple_alignment
-                    alignment_comment = simple_alignment(denovoseq, map2refseq)
+                ### udpate sequence
+                    # pass to function
                     
-                    # add to results summary
-                    results_ws3_row = results_ws3.max_row + 1
-                    results_ws3['A' + str(results_ws3_row)].value = constructname
-                    results_ws3['B' + str(results_ws3_row)].value = commonvar
-                    results_ws3['C' + str(results_ws3_row)].value = map2refseq
-                    results_ws3['D' + str(results_ws3_row)].value = denovoseq
-                    results_ws3['E' + str(results_ws3_row)].value = alignment_comment
+                    from sequence_funcs import compareSeq
+                    seqident = compareSeq(map2refseq, denovoseq)
+                    if seqident == True:
+                        cdb[sequence_col + str(cdbindex)].value = denovoseq # if assembled sequences are identical, plug in denovo sequence
+                        # make the cell yellow
+                        cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
+                    else:
+                        # common var called but sequences are different.
+                        # make the cell blue
+                        cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="00e5ff")
+                        
+                        # plug the denovoseq into the cdb record
+                        cdb[sequence_col + str(cdbindex)].value = denovoseq
+                        
+                        # align the map2ref and denovo sequences
+                        from sequence_funcs import simple_alignment
+                        alignment_comment = simple_alignment(denovoseq, map2refseq)
+                        
+                        # add to results summary
+                        results_ws3_row = results_ws3.max_row + 1
+                        results_ws3['A' + str(results_ws3_row)].value = constructname
+                        results_ws3['B' + str(results_ws3_row)].value = commonvar
+                        results_ws3['C' + str(results_ws3_row)].value = map2refseq
+                        results_ws3['D' + str(results_ws3_row)].value = denovoseq
+                        results_ws3['E' + str(results_ws3_row)].value = alignment_comment
+                        
+                    ### Annotation functions
+                    origComment = cdb[comments_col + str(cdbindex)].value
+                    goodMutations = newconstructname[1]
+                    extraMutations = newconstructname[2]
                     
-                ### Annotation functions
+                    from annotations import annotate
+                    finalComment = annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold)
+                    
+                    from sequence_funcs import findFrameshift
+                    frameshiftList = findFrameshift(denovovar)
+                    if frameshiftList is not None:
+                        if frameshiftList[0] == True:
+                            finalComment += ' ' + 'frameshift-' + frameshiftList[1] + ', '
+                            
+                    ### other nucleotide polymorphisms comments
+                    # from sequence_funcs import polymorphisms
+                    # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+                    # if other_polymorphisms is not None:
+                    #     finalComment += other_polymorphisms
+                            
+                    cdb[comments_col + str(cdbindex)].value = finalComment
+                    
+                    #                 # check if a partial sequence was found, and add to the corresponding results_summary worksheet
+                    # isSeqPartial = finalComment.find('partial-length')
+                    # if isSeqPartial > -1:
+                    #     results_ws7_row += 1
+                    #     results_ws7['A' + str(results_ws7_row)].value = constructname
+                    #     results_ws7['B' + str(results_ws7_row)].value = denovoseq
+                    #     results_ws7['C' + str(results_ws7_row)].value = len(denovoseq)
+                    #     results_ws7['D' + str(results_ws7_row)].value = searchtext
+                    #     results_ws7['E' + str(results_ws7_row)].value = finalComment
+    
+    
+            
+            else: # commonvar is None
+            
+                ### Frameshifts without a commonvar    
                 origComment = cdb[comments_col + str(cdbindex)].value
-                goodMutations = newconstructname[1]
-                extraMutations = newconstructname[2]
-                scaffold = str(cdb[categorynumber_col + str(cdbindex)].value)
-                
-                from annotations import annotate
-                finalComment = annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold)
-                
+            
                 from sequence_funcs import findFrameshift
                 frameshiftList = findFrameshift(denovovar)
                 if frameshiftList is not None:
                     if frameshiftList[0] == True:
-                        finalComment += ' ' + 'frameshift-' + frameshiftList[1] + ', '
+                        finalComment = origComment + '_DS: frameshift-' + frameshiftList[1] + ', ' # simply states the residue at which the frameshift starts.
+                        cdb[comments_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
+                        constructs_updated += 1
+                else:
+                    finalComment = origComment
                         
-                from sequence_funcs import polymorphisms
-                other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
-                if other_polymorphisms is not None:
-                    finalComment += other_polymorphisms
-                        
+                # If no commonvar exists, no need to look for problems besides frameshifts.
+                
+                # from sequence_funcs import polymorphisms
+                # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+                # if other_polymorphisms is not None:
+                #     finalComment += other_polymorphisms
+                
                 cdb[comments_col + str(cdbindex)].value = finalComment
-                
-                
-
-
-        
-        else: # commonvar is None
-        
-            ### Frameshifts without a commonvar    
-            origComment = cdb[comments_col + str(cdbindex)].value
-        
-            from sequence_funcs import findFrameshift
-            frameshiftList = findFrameshift(denovovar)
-            if frameshiftList is not None:
-                if frameshiftList[0] == True:
-                    finalComment = origComment + ': frameshift-' + frameshiftList[1] + ', ' # simply states the residue at which the frameshift starts.
-                    cdb[comments_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="ffff00")
-                    constructs_updated += 1
-            else:
-                finalComment = origComment
-                    
-            # If no commonvar exists, no need to look for problems besides frameshifts.
+                        
             
+            ### save frameshift results to results_ws2
+            if frameshiftList is not None:
+                results_ws2_row = results_ws2.max_row + 1
+                results_ws2['A' + str(results_ws2_row)].value = constructname
+                results_ws2['B' + str(results_ws2_row)].value = denovovar
+                results_ws2['C' + str(results_ws2_row)].value = finalComment
+                
+            print('Comment: ' + finalComment)
+            
+            ### Other single nucleotide polymorphisms and insertion/deletions:
             # from sequence_funcs import polymorphisms
             # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
             # if other_polymorphisms is not None:
             #     finalComment += other_polymorphisms
+        
+        
+        elif seqFound == True: # found a Sanger sequence, don't modify to CDB record
+        
+            # TESTING ONLY - color the unchanged construct records green
+            cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
+            cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
             
-            cdb[comments_col + str(cdbindex)].value = finalComment
-                    
-        
-        ### save frameshift results to results_ws2
-        if frameshiftList is not None:
-            results_ws2_row = results_ws2.max_row + 1
-            results_ws2['A' + str(results_ws2_row)].value = constructname
-            results_ws2['B' + str(results_ws2_row)].value = denovovar
-            results_ws2['C' + str(results_ws2_row)].value = finalComment
+            constructname = cdb[samplename_col + str(cdbindex)].value
+            # map2refvar = ms[map2ref_var_col + str(j)].value
+            # denovovar = ms[denovo_var_col + str(j)].value
+            commonvar = ms[common_var_col + str(j)].value
             
+            results_ws6_row += 1
+            
+            
+            results_ws6['A' + str(results_ws6_row)].value = constructname
+            
+            # if commonvar is not None:
+            if map2refseq is not None and denovoseq is not None:
+                from sequence_funcs import compareSanger
+                sanger_muts = compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold)
+                if sanger_muts is not None:
+                    results_ws6['B' + str(results_ws6_row)].value = sanger_muts[0]
+                    if sanger_muts[1] == True:
+                        results_ws6['F' + str(results_ws6_row)].value = 1
+                        results_ws6['F' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "00ff00")
+                        
+                    else:
+                        results_ws6['F' + str(results_ws6_row)].value = 0
+                        results_ws6['F' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ff9900")
         
-        
-        ### Other single nucleotide polymorphisms and insertion/deletions:
-        # from sequence_funcs import polymorphisms
-        # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
-        # if other_polymorphisms is not None:
-        #     finalComment += other_polymorphisms
-    
-    
-    elif seqFound == True: # found a Sanger sequence, don't modify to CDB record
-    
-        # TESTING ONLY - color the unchanged construct records green
-        cdb[samplename_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
-        cdb[sequence_col + str(cdbindex)].fill = PatternFill(fill_type="solid", fgColor="48ff00")
-        
-        constructname = cdb[samplename_col + str(cdbindex)].value
-        # map2refvar = ms[map2ref_var_col + str(j)].value
-        # denovovar = ms[denovo_var_col + str(j)].value
-        commonvar = ms[common_var_col + str(j)].value
-        
-        results_ws6_row += 1
-        
-        
-        results_ws6['A' + str(results_ws6_row)].value = constructname
-        
-        if commonvar is not None:
-            from sequence_funcs import compareSanger
-            sanger_muts = compareSanger(constructname, commonvar)
-            if sanger_muts is not None:
-                results_ws6['B' + str(results_ws6_row)].value = sanger_muts[0]
-                if sanger_muts[1] == True:
-                    results_ws6['D' + str(results_ws6_row)].value = 1
-                    results_ws6['D' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "00ff00")
-                    
-                else:
-                    results_ws6['D' + str(results_ws6_row)].value = 0
-                    results_ws6['D' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ff9900")
-
-            results_ws6['C' + str(results_ws6_row)].value = commonvar
-        
-        results_ws6['E' + str(results_ws6_row)].value = searchtext
+                    if map2refvar is not None:
+                        results_ws6['C' + str(results_ws6_row)].value = map2refvar
+                    else:
+                        results_ws6['C' + str(results_ws6_row)].value = sanger_muts[2]
+                        results_ws6['C' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
+                        
+                    if denovovar is not None:
+                        results_ws6['D' + str(results_ws6_row)].value = denovovar
+                    else:
+                        results_ws6['D' + str(results_ws6_row)].value = sanger_muts[3]
+                        results_ws6['D' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
+                        
+                    if commonvar is not None:
+                        results_ws6['E' + str(results_ws6_row)].value = commonvar
+                    else:
+                        results_ws6['E' + str(results_ws6_row)].value = ''
+                        results_ws6['E' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
+                
+                results_ws6['G' + str(results_ws6_row)].value = searchtext
             
         
         
@@ -368,7 +411,7 @@ for m in range(0, len(unique_muts)):
     results_ws4['A' + str(results_ws4_row)].value = unique_muts[m]
     results_ws4['B' + str(results_ws4_row)].value = occurrences
 
-results_ws4['B1'].value = j+1 # fill in the number of constructs processed. 
+results_ws4['B1'].value = j-1 # fill in the number of constructs processed. 
 results_ws4['B2'].value = constructs_updated # fill in the number of construct names changed
 
 cdb_file.save(cdb_output_file)

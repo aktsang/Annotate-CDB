@@ -14,14 +14,24 @@ Polymorphisms: don't call mutations that occur in the stop codon (i.e. for 376 t
 
 
 
-add an ambiguity function, such as:
+add an ambiguous call function, such as:
 
 constructname: 'pGP-CAG-ASAP1-WPRE-bGH-polyA T392X_D393X.376.16745'
 map2refvar: 'T392A,D393*'
 denovovar: 'T392A,D393S,V404G'
 commonvar: 'T392A'
-
 It would be good to note that the D393 mutation was found, but different in map2ref vs denovo
 
+partial length sequence end base counts are wildly inaccurate.
+If the partial sequence is not an exact match to something in the denovo sequence, the python find() function returns value of -1. 
+ideas for improvement: use pairwise2 to perform a local alignment if sample sequence is much shorter than ref sequence.
+The start and end bases can be determined by the corresponding positions of the local sequence alignment
+
+
+list partial de novo sequences in results summary
+
+
+
+translate: some sequences from master summary contain 'nnnnnnnnn' where I guess the nucleotides were not found
 """
 

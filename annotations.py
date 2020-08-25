@@ -20,9 +20,11 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
     mutResidueRegex = re.compile(r'[A-Z]\d+([A-Z]|\*)') # search pattern to return the mutation residue, e.g. X, Y, or *
     aanumRegex = re.compile(r'[A-Z](\d+)') # search pattern for residue number
     
-    newComment = ': '
+    newComment = '_DS: '
     
-    # as written, this will error if denovo seqeuence is not a full length gene sequence
+    scaffoldSeq = scaffold_dna[str(scaffold)]
+    reflength = len(scaffoldSeq)
+    
     
     if goodMutations is not None:
         numGoodMuts = len(goodMutations)
@@ -37,29 +39,40 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
             mutCodon = denovoseq_codon_index[residueIndex-1] # -1 because python starts counting at zero
             
             ### full or partial length
-            scaffoldSeq = scaffold_dna[str(scaffold)]
-            reflength = len(scaffoldSeq)
             
-            if len(denovoseq) > 0.9 * reflength: # here, having more than 90% of the gene sequence length is considered full length
-                seqlength = 'full-length'
-            else:
-                seqlength = 'partial-length'
-                
-            if seqlength == 'partial-length':
-                #look for the first 3 codons of partial length seq to find start-base
-                # look for the last 3 codons of partial length seq to find end-base
-                start_search = denovoseq[0:8]
-                end_search = denovoseq[len(denovoseq)-9 : len(denovoseq)]
-                
-                start_base = scaffoldSeq.find(start_search)
-                end_base = scaffoldSeq.find(end_search) + 9
+            newComment += mutation + ', ' + mutCodon + ', '
+        
+        # moved out of the above for loop  8/17/20
+        if len(denovoseq) > 0.9 * reflength: # here, having more than 90% of the gene sequence length is considered full length
+            seqlength = 'full-length'
+            newComment += seqlength  + ', '
+        
+        else:
+            seqlength = 'partial-length'
             
-            ### Build the comment
-            if seqlength == 'full-length':
-                newComment += mutation + ', ' + mutCodon + ', ' + seqlength  + ', '
+            # Perform a local alignment
+            from Bio import pairwise2
+            gap_open_penalty = -2
+            gap_extend_penalty = -1
+            partialAlignment = pairwise2.align.localxs(scaffoldSeq, denovoseq, gap_open_penalty, gap_extend_penalty)
+            while len(partialAlignment) > 1: # run pairwise2 with increasing stringency while more than one alignment is returned
+                if gap_open_penalty < -20: # something is clearly very wrong with the data at this point
+                    break
+                gap_open_penalty -= 1
+                gap_extend_penalty -=0.5
+                partialAlignment = pairwise2.align.localxs(scaffoldSeq, denovoseq, gap_open_penalty, gap_extend_penalty)
+            
+            if len(partialAlignment) > 0:
+                refAligned = partialAlignment[0].seqA
+                denovoAligned = partialAlignment[0].seqB
+                start_base = partialAlignment[0].start
+                end_base = partialAlignment[0].end
             else:
-                newComment += mutation + ', ' + mutCodon + ', ' + seqlength + ', ' \
-                    + 'start-base ' + str(start_base) + ', ' + 'end-base ' + str(end_base) + ', '
+                start_base = 'N/A' # REVISE THIS CODE
+                end_base = 'N/A'
+                
+            newComment += seqlength + ', ' + 'start-base ' + str(start_base) + ', ' + 'end-base ' + str(end_base) + ', '
+            
         
     if extraMutations is not None:
         numExtraMuts = len(extraMutations)
