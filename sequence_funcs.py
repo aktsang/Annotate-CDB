@@ -34,7 +34,7 @@ def compareSeq(map2refseq, denovoseq):
         return False # more code to be written
     
 
-def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold):
+def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, searchtext):
     mutRegex = re.compile(r'[A-Z]\d+[A-Z]') # original mutation regex
     # mutRegex = re.compile(r'[A-Z]\d+[A-Z]')
     stopregex = re.compile(r'[A-Z]\d+STOP')
@@ -107,7 +107,7 @@ def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold):
     map2refString = ''
     denovoString = ''
         
-    foundMutations = findMutations(scaffold, map2refseq, denovoseq)
+    foundMutations = findMutations(scaffold, map2refseq, denovoseq, searchtext)
         
     map2refMut = foundMutations[0]
     denovoMut = foundMutations[1]
@@ -228,7 +228,7 @@ def codon_index(dnaseq):
 
 
 
-def findMutations(scaffold, map2refseq, denovoseq):
+def findMutations(scaffold, map2refseq, denovoseq, searchtext):
     #
     # get scaffold sequence from scaffold number input
     from reference_sequences import scaffold_protein
@@ -249,7 +249,7 @@ def findMutations(scaffold, map2refseq, denovoseq):
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             map2refAlignment = pairwise2.align.globalxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
-            print('Global: Trying gap penalty ' + str(gap_open_penalty))
+            print(searchtext + ' Global: Trying gap penalty ' + str(gap_open_penalty))
             
             if gap_open_penalty <= -10: # break and go to local alignment
                 gap_penalty_break = 1
@@ -261,7 +261,10 @@ def findMutations(scaffold, map2refseq, denovoseq):
                 gap_open_penalty -= 1
                 gap_extend_penalty -= 1
                 map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
-                print('Local: Trying gap penalty ' + str(gap_open_penalty))
+                print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+                if gap_open_penalty < -20:
+                    return None
+                    break
             
     
     else: # partial length alignment
@@ -270,7 +273,10 @@ def findMutations(scaffold, map2refseq, denovoseq):
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
-            print('Local: Trying gap penalty ' + str(gap_open_penalty))
+            print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+            if gap_open_penalty < -20:
+                    return None
+                    break
             
         
     # align the denovo sequences
@@ -284,7 +290,7 @@ def findMutations(scaffold, map2refseq, denovoseq):
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             denovoAlignment = pairwise2.align.globalxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
-            print('Global: Trying gap penalty ' + str(gap_open_penalty))
+            print(searchtext + ' Global: Trying gap penalty ' + str(gap_open_penalty))
             
             if gap_open_penalty <= -10: # break and go to local alignment
                 gap_penalty_break = 1
@@ -296,7 +302,10 @@ def findMutations(scaffold, map2refseq, denovoseq):
                 gap_open_penalty -= 1
                 gap_extend_penalty -= 1
                 denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
-                print('Local: Trying gap penalty ' + str(gap_open_penalty))
+                print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+                if gap_open_penalty < -20:
+                    return None
+                    break
     
     else: # partial length alignment
         denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
@@ -304,7 +313,10 @@ def findMutations(scaffold, map2refseq, denovoseq):
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
-            print('Local: Trying gap penalty ' + str(gap_open_penalty))
+            print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+            if gap_open_penalty < -20:
+                return None
+                break
     
     map2refseqA = map2refAlignment[0].seqA
     map2refseqB = map2refAlignment[0].seqB
@@ -387,7 +399,41 @@ def findFrameshift(mutations): #pass a mutation list into this function
 # https://towardsdatascience.com/starting-off-in-bioinformatics-turning-dna-sequences-into-protein-sequences-c771dc20b89f
 
 
-
+def iterativeAlignment(seq, refseq):
+    # align the denovo sequences
+    from Bio import pairwise2
+    gap_open_penalty = -1
+    gap_extend_penalty = -0.5
+    # full length alignment
+    if len(seq) > 0.95 * len(refseq):
+        denovoAlignment = pairwise2.align.globalxs(refseq, seq, gap_open_penalty, gap_extend_penalty)
+        while len(denovoAlignment) > 1 or gap_open_penalty > -10:
+            gap_open_penalty -= 1
+            gap_extend_penalty -= 1
+            denovoAlignment = pairwise2.align.globalxs(refseq, seq, gap_open_penalty, gap_extend_penalty)
+            
+            if gap_open_penalty <= -10: # break and go to local alignment
+                gap_penalty_break = 1
+                break
+            
+        if gap_penalty_break == 1:
+            denovoAlignment = pairwise2.align.localxs(refseq, seq, gap_open_penalty, gap_extend_penalty)
+            while len(denovoAlignment) > 1:
+                gap_open_penalty -= 1
+                gap_extend_penalty -= 1
+                denovoAlignment = pairwise2.align.localxs(refseq, seq, gap_open_penalty, gap_extend_penalty)
+    
+    else: # partial length alignment
+        denovoAlignment = pairwise2.align.localxs(refseq, seq, gap_open_penalty, gap_extend_penalty)
+        while len(denovoAlignment) > 1:
+            gap_open_penalty -= 1
+            gap_extend_penalty -= 1
+            denovoAlignment = pairwise2.align.localxs(refseq, seq, gap_open_penalty, gap_extend_penalty)
+    
+    denovoTransAlign = denovoAlignment[0].seqA
+    refTransAlign = denovoAlignment[0].seqB
+    return denovoTransAlign, refTransAlign
+    
 
 def translate(dna):
     from reference_sequences import protein

@@ -75,6 +75,7 @@ results_ws4 = results_wb.create_sheet("Mutation Count")
 results_ws5 = results_wb.create_sheet("Unidentified Entries")
 results_ws6 = results_wb.create_sheet("Sanger Sequenced")
 results_ws7 = results_wb.create_sheet("Partial Length Sequences")
+results_ws8 = results_wb.create_sheet("No common_var")
 
 # intial values of the excel results summary
 results_ws1_row = 1
@@ -84,6 +85,7 @@ results_ws4_row = 4
 results_ws5_row = 1
 results_ws6_row = 1
 results_ws7_row = 1
+results_ws8_row = 1
 
 results_ws0.title = "Summary"
 results_ws0['A1'].value = 'Worksheet name'
@@ -138,6 +140,11 @@ results_ws7['B1'].value = 'De Novo sequence'
 results_ws7['C1'].value = 'Sequence Length'
 results_ws7['D1'].value = 'Clone Location'
 results_ws7['E1'].value = 'Comment'
+
+results_ws8['A1'].value = 'constructname'
+results_ws8['B1'].value = 'Plate Info'
+results_ws8['C1'].value = 'map2ref analysis'
+results_ws8['D1'].value = 'denovo analysis'
 
 # the total number of constructs processed is added to the workbook at the end of the program. 
 
@@ -227,7 +234,7 @@ for j in range(2, msrows):
                 
                 ### update name
                 from updateMutants import updateMutations
-                newconstructname = updateMutations(constructname, map2refvar, denovovar, commonvar)
+                newconstructname = updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq, commonvar, scaffold)
                 
                 print(newconstructname)
                 
@@ -304,6 +311,24 @@ for j in range(2, msrows):
     
             
             else: # commonvar is None
+                if map2refseq != None and denovoseq != None:
+                    from sequence_funcs import findMutations
+                    mut_from_seq = findMutations(scaffold, map2refseq, denovoseq, searchtext)
+                    if mut_from_seq is not None:
+                        if len(mut_from_seq) > 0:
+                            results_ws8_row += 1
+                            results_ws8['A' + str(results_ws8_row)].value = constructname
+                            results_ws8['B' + str(results_ws8_row)].value = searchtext
+                            
+                            map2refString = ''
+                            denovoString = ''
+                            for i in range(len(mut_from_seq[0])):
+                                map2refString += mut_from_seq[0][i]
+                                
+                            for j in range(len(mut_from_seq[1])):
+                                denovoString += mut_from_seq[1][j]
+                            results_ws8['C' + str(results_ws8_row)].value = map2refString
+                            results_ws8['D' + str(results_ws8_row)].value = denovoString
             
                 ### Frameshifts without a commonvar    
                 origComment = cdb[comments_col + str(cdbindex)].value
@@ -360,10 +385,10 @@ for j in range(2, msrows):
             
             results_ws6['A' + str(results_ws6_row)].value = constructname
             
-            # if commonvar is not None:
+            
             if map2refseq is not None and denovoseq is not None:
                 from sequence_funcs import compareSanger
-                sanger_muts = compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold)
+                sanger_muts = compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, searchtext)
                 if sanger_muts is not None:
                     results_ws6['B' + str(results_ws6_row)].value = sanger_muts[0]
                     if sanger_muts[1] == True:
