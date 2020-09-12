@@ -36,27 +36,45 @@ def compareSeq(map2refseq, denovoseq):
 
 def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, searchtext):
     mutRegex = re.compile(r'[A-Z]\d+[A-Z]') # original mutation regex
-    # mutRegex = re.compile(r'[A-Z]\d+[A-Z]')
     stopregex = re.compile(r'[A-Z]\d+STOP')
+    lowerstopregex = re.compile(r'[A-Z]\d+stop')
     asteriskregex = re.compile(r'[A-Z]\d+\*')
     origRegex = re.compile(r'([A-Z]\d+)[A-Z]') # original residue regex
     indexRegex = re.compile(r'[A-Z](\d+)') # residue number regex
     
     constructname_mutations = []
+    constructname_stops = []
     
+    print('Sanger Comparison')
     # pass constructname through regex to find mutations
     if 'STOP' in constructname:
-        constructname_stops = stopregex.findall(constructname) #mutRegex will find 'T559STOP' as 'T559S', so need to clear out stops first.
+        constructname_stops = stopregex.findall(constructname) #mutRegex will find 'T559STOP' as 'T559S', so find stops first, then find other mutations.
         for h in range(len(constructname_stops)): # delete stop mutations
+            temp_constructname = constructname.replace(constructname_stops[h], '') # blank out stops so mutRegex doesn't recognize them as "T558S"
+        
+        # find all non-stop mutations
+        constructname_mutations = mutRegex.findall(temp_constructname) # get all stop mutations into constructname_mutations
+            
+    elif 'stop' in constructname:
+        constructname_stops = lowerstopregex.findall(constructname)
+        for h in range(len(constructname_stops)):
             temp_constructname = constructname.replace(constructname_stops[h], '')
         
         # find all non-stop mutations
-        constructname_mutations = mutRegex.findall(temp_constructname) # find all mutations except stops
-        
-        for g in range(len(constructname_stops)):
-            constructname_mutations.append(constructname_stops[h])
+        constructname_mutations = mutRegex.findall(temp_constructname) # get all stop mutations into constructname_mutations
+            
     else:
         constructname_mutations = mutRegex.findall(constructname)
+        
+    # append any the stop mutations to constructname_mutations
+    if len(constructname_stops) > 0:
+        for g in range(len(constructname_stops)):
+            constructname_mutations.append(constructname_stops[h]) # add stop mutations to the end of the mutation list. 
+    
+    
+        
+    print(constructname_stops)
+    print(constructname_mutations)
         
     commonvarMut = []
     # if commonvar contains asterisk, convert to 'STOP'
@@ -208,8 +226,82 @@ def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, sea
     print(sangervar)
         
 
+def getSangerMutations(constructname, commonvar, map2refseq, denovoseq, scaffold, searchtext):
+    mutRegex = re.compile(r'[A-Z]\d+[A-Z]') # original mutation regex
+    stopregex = re.compile(r'[A-Z]\d+STOP')
+    lowerstopregex = re.compile(r'[A-Z]\d+stop')
+    asteriskregex = re.compile(r'[A-Z]\d+\*')
+    origRegex = re.compile(r'([A-Z]\d+)[A-Z]') # original residue regex
+    indexRegex = re.compile(r'[A-Z](\d+)') # residue number regex
+    
+    constructname_mutations = []
+    constructname_stops = []
+    
+    print('Sanger Comparison')
+    # pass constructname through regex to find mutations
+    if 'STOP' in constructname:
+        constructname_stops = stopregex.findall(constructname) #mutRegex will find 'T559STOP' as 'T559S', so find stops first, then find other mutations.
+        for h in range(len(constructname_stops)): # delete stop mutations
+            temp_constructname = constructname.replace(constructname_stops[h], '') # blank out stops so mutRegex doesn't recognize them as "T558S"
+        
+        # find all non-stop mutations
+        constructname_mutations = mutRegex.findall(temp_constructname) # get all stop mutations into constructname_mutations
+            
+    elif 'stop' in constructname:
+        constructname_stops = lowerstopregex.findall(constructname)
+        for h in range(len(constructname_stops)):
+            temp_constructname = constructname.replace(constructname_stops[h], '')
+        
+        # find all non-stop mutations
+        constructname_mutations = mutRegex.findall(temp_constructname) # get all stop mutations into constructname_mutations
+            
+    else:
+        constructname_mutations = mutRegex.findall(constructname)
+        
+    # append any the stop mutations to constructname_mutations
+    if len(constructname_stops) > 0:
+        for g in range(len(constructname_stops)):
+            constructname_mutations.append(constructname_stops[h]) # add stop mutations to the end of the mutation list. 
     
     
+        
+    # print(constructname_stops)
+    # print(constructname_mutations)
+        
+    commonvarMut = []
+    # if commonvar contains asterisk, convert to 'STOP'
+    if commonvar is not None:
+        findasterisk = commonvar.find('*')
+        if findasterisk > -1:
+            commonvar = commonvar.replace('*', 'STOP')
+            commonvarMut_stop = stopregex.findall(commonvar)
+            for f in range(len(commonvarMut_stop)):
+                temp_commonvar = commonvar.replace(commonvarMut_stop[f], '')
+            
+            commonvarMut = mutRegex.findall(temp_commonvar)
+            
+            for e in range(len(commonvarMut_stop)):
+                commonvarMut.append(commonvarMut_stop[e])
+        else:
+            commonvarMut = mutRegex.findall(commonvar)
+    else: commonvarMut = []
+    
+    # concatenate constructname mutations into same format as commonvar
+    sangervar = ''
+    if len(constructname_mutations) > 0:
+        for i in range(len(constructname_mutations)):
+            # read constructname for lowercase stops, convert to upper
+            findlowerstop = constructname_mutations[i].find('stop')
+            # print(findlowerstop)
+            if findlowerstop > -1:
+                constructname_mutations[i] = constructname_mutations[i].upper()
+                
+            if i < len(constructname_mutations)-1:
+                sangervar += constructname_mutations[i] + ','
+            else:
+                sangervar += constructname_mutations[i]
+    
+    return sangervar
 
 
 def codon_index(dnaseq):
@@ -229,7 +321,8 @@ def codon_index(dnaseq):
 
 
 def findMutations(scaffold, map2refseq, denovoseq, searchtext):
-    #
+    
+    print('Find Mutations')
     # get scaffold sequence from scaffold number input
     from reference_sequences import scaffold_protein
     scaffold_prot_seq = scaffold_protein[scaffold]
@@ -245,11 +338,12 @@ def findMutations(scaffold, map2refseq, denovoseq, searchtext):
     # full length alignment
     if len(map2refTranslation) > 0.95 * len(scaffold_prot_seq):
         map2refAlignment = pairwise2.align.globalxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+        print('Aligning ' + searchtext + ' map2ref, Global')
         while len(map2refAlignment) > 1 or gap_open_penalty > -10: 
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             map2refAlignment = pairwise2.align.globalxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
-            print(searchtext + ' Global: Trying gap penalty ' + str(gap_open_penalty))
+            # print(searchtext + ' Global: Trying gap penalty ' + str(gap_open_penalty))
             
             if gap_open_penalty <= -10: # break and go to local alignment
                 gap_penalty_break = 1
@@ -257,11 +351,12 @@ def findMutations(scaffold, map2refseq, denovoseq, searchtext):
         
         if gap_penalty_break == 1:
             map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+            print('Aligning ' + searchtext + ' map2ref, Local')
             while len(map2refAlignment) > 1:
                 gap_open_penalty -= 1
                 gap_extend_penalty -= 1
                 map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
-                print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+                # print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
                 if gap_open_penalty < -20:
                     return None
                     break
@@ -269,11 +364,12 @@ def findMutations(scaffold, map2refseq, denovoseq, searchtext):
     
     else: # partial length alignment
         map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
+        print('Aligning ' + searchtext + ' map2ref, Local')
         while len(map2refAlignment) > 1:
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             map2refAlignment = pairwise2.align.localxs(scaffold_prot_seq, map2refTranslation, gap_open_penalty, gap_extend_penalty)
-            print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+            # print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
             if gap_open_penalty < -20:
                     return None
                     break
@@ -285,35 +381,38 @@ def findMutations(scaffold, map2refseq, denovoseq, searchtext):
     gap_extend_penalty = -0.5
     # full length alignment
     if len(denovoTranslation) > 0.95 * len(scaffold_prot_seq):
+        print('Aligning ' + searchtext + ' denovo, Global')
         denovoAlignment = pairwise2.align.globalxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
         while len(denovoAlignment) > 1 or gap_open_penalty > -10:
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             denovoAlignment = pairwise2.align.globalxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
-            print(searchtext + ' Global: Trying gap penalty ' + str(gap_open_penalty))
+            # print(searchtext + ' Global: Trying gap penalty ' + str(gap_open_penalty))
             
             if gap_open_penalty <= -10: # break and go to local alignment
                 gap_penalty_break = 1
                 break
             
         if gap_penalty_break == 1:
+            print('Aligning ' + searchtext + ' denovo, Local')
             denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
             while len(denovoAlignment) > 1:
                 gap_open_penalty -= 1
                 gap_extend_penalty -= 1
                 denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
-                print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+                # print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
                 if gap_open_penalty < -20:
                     return None
                     break
     
     else: # partial length alignment
         denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
+        print('Aligning ' + searchtext + ' denovo, Local')
         while len(denovoAlignment) > 1:
             gap_open_penalty -= 1
             gap_extend_penalty -= 1
             denovoAlignment = pairwise2.align.localxs(scaffold_prot_seq, denovoTranslation, gap_open_penalty, gap_extend_penalty)
-            print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
+            # print(searchtext + ' Local: Trying gap penalty ' + str(gap_open_penalty))
             if gap_open_penalty < -20:
                 return None
                 break

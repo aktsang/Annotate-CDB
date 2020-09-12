@@ -72,7 +72,7 @@ results_ws1 = results_wb.create_sheet("Combos Renamed")
 results_ws2 = results_wb.create_sheet("Frameshifts")
 results_ws3 = results_wb.create_sheet("Non-identical Sequences")
 results_ws4 = results_wb.create_sheet("Mutation Count")
-results_ws5 = results_wb.create_sheet("Unidentified Entries")
+# results_ws5 = results_wb.create_sheet("Unidentified Entries")
 results_ws6 = results_wb.create_sheet("Sanger Sequenced")
 results_ws7 = results_wb.create_sheet("Partial Length Sequences")
 results_ws8 = results_wb.create_sheet("No common_var")
@@ -82,7 +82,7 @@ results_ws1_row = 1
 results_ws2_row = 1
 results_ws3_row = 1
 results_ws4_row = 4
-results_ws5_row = 1
+# results_ws5_row = 1
 results_ws6_row = 1
 results_ws7_row = 1
 results_ws8_row = 1
@@ -98,12 +98,14 @@ results_ws0['A4'].value = 'Mapped and Denovo Mismatch'
 results_ws0['B4'].value = 'Called mutations with mismatches between mapped and de novo assembly gene sequences.'
 results_ws0['A5'].value = 'Mutation Count'
 results_ws0['B5'].value = 'All non-SDM mutations found in the dataset.'
-results_ws0['A6'].value = 'Unidentified entries'
-results_ws0['B6'].value = 'Entries in the master summary not found in the CDB'
-results_ws0['A7'].value = 'Sanger Sequenced'
+# results_ws0['A6'].value = 'Unidentified entries'
+# results_ws0['B6'].value = 'Entries in the master summary not found in the CDB'
+results_ws0['A7'].value = 'Sanger Sequenced Comparison'
 results_ws0['B7'].value = 'Clones with an existing Sanger Sequence, therefore record not updated'
 results_ws0['A8'].value = 'Partial Length Sequences'
 results_ws0['B8'].value = 'As title says'
+results_ws0['A9'].value = 'No common_var'
+results_ws0['B9'].value = 'If no mutation was call, the sequences were translated and searched for mutations, shown here. '
 
 results_ws1['A1'].value = 'Old construct name'
 results_ws1['B1'].value = 'New construct name'
@@ -123,9 +125,9 @@ results_ws4['A2'].value = 'Number of constructs updated: '
 results_ws4['A4'].value = 'Mutation'
 results_ws4['B4'].value = 'Number of constructs containing'
 
-results_ws5['A1'].value = 'Sample'
-results_ws5['B1'].value = 'Plate'
-results_ws5['C1'].value = 'Well'
+# results_ws5['A1'].value = 'Sample'
+# results_ws5['B1'].value = 'Plate'
+# results_ws5['C1'].value = 'Well'
 
 results_ws6['A1'].value = 'Construct name'
 results_ws6['B1'].value = 'Sanger Call'
@@ -198,11 +200,11 @@ for j in range(2, msrows):
                 cdbindex = k # save the row number of this entry
                 break # exit cdb search loop when the entry is found. 
                 
-        if k == cdbrows and pwmatchfound == 0: # plate and well info were not found in the construct database list.
-            results_ws5_row += 1
-            results_ws5['A' + str(results_ws5_row)].value = ms[samplename_col + str(j)].value
-            results_ws5['B' + str(results_ws5_row)].value = ms[plate_col + str(j)].value
-            results_ws5['C' + str(results_ws5_row)].value = ms[well_col + str(j)].value
+        # if k == cdbrows and pwmatchfound == 0: # plate and well info were not found in the construct database list.
+        #     results_ws5_row += 1
+        #     results_ws5['A' + str(results_ws5_row)].value = ms[samplename_col + str(j)].value
+        #     results_ws5['B' + str(results_ws5_row)].value = ms[plate_col + str(j)].value
+        #     results_ws5['C' + str(results_ws5_row)].value = ms[well_col + str(j)].value
             
     if pwmatchfound == 1:
         ### Name and Sequence update
@@ -290,26 +292,23 @@ for j in range(2, msrows):
                         if frameshiftList[0] == True:
                             finalComment += ' ' + 'frameshift-' + frameshiftList[1] + ', '
                             
-                    ### other nucleotide polymorphisms comments
-                    # from sequence_funcs import polymorphisms
-                    # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
-                    # if other_polymorphisms is not None:
-                    #     finalComment += other_polymorphisms
-                            
                     cdb[comments_col + str(cdbindex)].value = finalComment
                     
-                    #                 # check if a partial sequence was found, and add to the corresponding results_summary worksheet
-                    # isSeqPartial = finalComment.find('partial-length')
-                    # if isSeqPartial > -1:
-                    #     results_ws7_row += 1
-                    #     results_ws7['A' + str(results_ws7_row)].value = constructname
-                    #     results_ws7['B' + str(results_ws7_row)].value = denovoseq
-                    #     results_ws7['C' + str(results_ws7_row)].value = len(denovoseq)
-                    #     results_ws7['D' + str(results_ws7_row)].value = searchtext
-                    #     results_ws7['E' + str(results_ws7_row)].value = finalComment
-    
-    
-            
+                    if finalComment.find('partial-length') > -1:
+                        results_ws7_row += 1
+                        results_ws7['A' + str(results_ws7_row)].value = constructname
+                        results_ws7['B' + str(results_ws7_row)].value = denovoseq
+                        results_ws7['C' + str(results_ws7_row)].value = len(denovoseq)
+                        results_ws7['D' + str(results_ws7_row)].value = searchtext
+                        results_ws7['E' + str(results_ws7_row)].value = finalComment
+                            
+                    # ## other nucleotide polymorphisms comments
+                    if denovoseq is not None:
+                        from sequence_funcs import polymorphisms
+                        other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+                    # if other_polymorphisms is not None:
+                    #     # finalComment += other_polymorphisms
+
             else: # commonvar is None
                 if map2refseq != None and denovoseq != None:
                     from sequence_funcs import findMutations
@@ -323,10 +322,17 @@ for j in range(2, msrows):
                             map2refString = ''
                             denovoString = ''
                             for i in range(len(mut_from_seq[0])):
-                                map2refString += mut_from_seq[0][i]
-                                
-                            for j in range(len(mut_from_seq[1])):
-                                denovoString += mut_from_seq[1][j]
+                                if i < len(mut_from_seq[0])-1:
+                                    map2refString += mut_from_seq[0][i] + ' '
+                                else: 
+                                    map2refString += mut_from_seq[0][i]
+                                    
+                            for d in range(len(mut_from_seq[1])):
+                                if d < len(mut_from_seq[1])-1:
+                                    denovoString += mut_from_seq[1][d] + ' '
+                                else:
+                                    denovoString += mut_from_seq[1][d]
+                            
                             results_ws8['C' + str(results_ws8_row)].value = map2refString
                             results_ws8['D' + str(results_ws8_row)].value = denovoString
             
@@ -345,8 +351,9 @@ for j in range(2, msrows):
                         
                 # If no commonvar exists, no need to look for problems besides frameshifts.
                 
-                # from sequence_funcs import polymorphisms
-                # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+                # # from sequence_funcs import polymorphisms
+                # if denovoseq is not None:
+                #     other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
                 # if other_polymorphisms is not None:
                 #     finalComment += other_polymorphisms
                 
@@ -354,6 +361,7 @@ for j in range(2, msrows):
                         
             
             ### save frameshift results to results_ws2
+            
             if frameshiftList is not None:
                 results_ws2_row = results_ws2.max_row + 1
                 results_ws2['A' + str(results_ws2_row)].value = constructname
@@ -362,9 +370,11 @@ for j in range(2, msrows):
                 
             print('Comment: ' + finalComment)
             
-            ### Other single nucleotide polymorphisms and insertion/deletions:
-            # from sequence_funcs import polymorphisms
-            # other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
+            ## Other single nucleotide polymorphisms and insertion/deletions:
+            from sequence_funcs import polymorphisms
+            
+            # if denovoseq is not None and goodMutations is not None:
+            #     other_polymorphisms = polymorphisms(scaffold, denovoseq, goodMutations)
             # if other_polymorphisms is not None:
             #     finalComment += other_polymorphisms
         
@@ -417,6 +427,15 @@ for j in range(2, msrows):
                         results_ws6['E' + str(results_ws6_row)].value = ''
                         results_ws6['E' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
                 
+                results_ws6['G' + str(results_ws6_row)].value = searchtext
+                
+            else:
+                # no returns from deep sequencing.
+                # just get the mutations from construct name to plug into results_summary
+                from sequence_funcs import getSangerMutations
+                sanger_muts = getSangerMutations(constructname, commonvar, map2refseq, denovoseq, scaffold, searchtext)
+                if sanger_muts is not None:
+                    results_ws6['B' + str(results_ws6_row)].value = sanger_muts
                 results_ws6['G' + str(results_ws6_row)].value = searchtext
             
         

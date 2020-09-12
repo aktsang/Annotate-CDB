@@ -15,11 +15,12 @@ import re
 
 def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq, commonvar, scaffold):
     
-    mutRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+\*') # search pattern for any mutation (e.g. N391X, T293Y, L405*)
+    # # mutRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+\*') # search pattern for any mutation (e.g. N391X, T293Y, L405*)
+    mutstarRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+\*') # search pattern for any mutation (e.g. N391X, T293Y, L405*)
     aaRegex = re.compile(r'[A-Z]\d+') # search pattern for residue number
     resRegex = re.compile(r'([A-Z])\d+') # search pattern for first residue letter only, when used with .findall
     aanumRegex = re.compile(r'[A-Z](\d+)')
-    stopRegex = re.compile(r'\*') # search for asterisk stop notation
+    stopstarRegex = re.compile(r'\*') # search for asterisk stop notation
     
 # Look for a Sanger sequence and mutation in CDB. If it exists, do nothing to the clone name
     print('UPDATE MUTATIONS')    
@@ -29,12 +30,12 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
     miscMutList = [] # a list of unexpected mutations
 
     if commonvar is not None:
-        cname_match = mutRegex.findall(constructname) # get list of mutations in CDB
-        commonvar_match = mutRegex.findall(commonvar) # get list of mutations called by DeepSeq
+        cname_match = mutstarRegex.findall(constructname) # get list of mutations in CDB
+        commonvar_match = mutstarRegex.findall(commonvar) # get list of mutations called by DeepSeq
         
         # convert '*' characters to 'STOP'
         for q in range(len(commonvar_match)):
-            find_asterisk = stopRegex.search(commonvar_match[q])
+            find_asterisk = stopstarRegex.search(commonvar_match[q])
             if find_asterisk is not None:
                 if find_asterisk.group() == '*':
                     commonvar_match[q] = commonvar_match[q].replace('*', 'STOP')
@@ -154,13 +155,16 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
         
         elif constructname.find('eppcr') > -1 and commonvar is not None:
             
-            splitpos = constructname.find('polyA.') + 6
-            name1 = constructname[:splitpos-1] + ' '
+            splitpos = constructname.find('polyA') + 5
+            name1 = constructname[:splitpos]
             name2 = ''
-            name3= constructname[splitpos-1:]
+            name3= constructname[splitpos:]
+            
+            # some CDB entries have a space after polyA which will be captured in name3
+            if name3[0] == ' ': 
+                name3 = name3[1:]
         
-        
-            commonvar_match = mutRegex.findall(commonvar)
+            commonvar_match = mutstarRegex.findall(commonvar)
         
             for v in range(len(commonvar_match)):
                 if v < len(commonvar_match) - 1:
@@ -169,8 +173,13 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
                     name2 += commonvar_match[v]
                     
                 mutList.append(commonvar_match[v])
+                
+            # replace asterisks with 'STOP'
+            if name2.find('*') > -1:
+                name2 = name2.replace('*', 'STOP')
                     
-            newconstructname = name1 + name2 + name3
+            newconstructname = name1 + ' ' + name2 + name3
+            
             return newconstructname, mutList, miscMutList
             
         
