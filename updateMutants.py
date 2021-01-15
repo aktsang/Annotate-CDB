@@ -134,17 +134,18 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
             # 2nd loop to check against mutList, everything else goes to miscMutList
             for t in range(0, num_ds_Matches):
                 if commonvar_match[t] not in mutList:
-                    mutList.append(commonvar_match[t]) # just throw it in mutList now so annotations() finds the codon
+                    # mutList.append(commonvar_match[t]) # just throw it in mutList now so annotations() finds the codon
                     miscMutList.append(commonvar_match[t]) # store all the deep seq identified mutations in miscMutList
                     
             
-            if len(miscMutList) > 0:
-                newname2 += ' '
-                for u in range(len(miscMutList)):
-                    if u < len(miscMutList)-1:
-                        newname2 += miscMutList[u] + ' '
-                    else:
-                        newname2 += miscMutList[u]
+            # put misc mutants into the new construct name
+            # if len(miscMutList) > 0:
+            #     newname2 += ' '
+            #     for u in range(len(miscMutList)):
+            #         if u < len(miscMutList)-1:
+            #             newname2 += miscMutList[u] + ' '
+            #         else:
+            #             newname2 += miscMutList[u]
                         
             if len(newname2) > 1:
                 newconstructname = name1 + newname2 + name3 # if newname2 was changed then create a new construct name. 

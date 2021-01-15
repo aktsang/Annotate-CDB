@@ -73,7 +73,7 @@ results_ws2 = results_wb.create_sheet("Frameshifts")
 results_ws3 = results_wb.create_sheet("Non-identical Sequences")
 results_ws4 = results_wb.create_sheet("Mutation Count")
 # results_ws5 = results_wb.create_sheet("Unidentified Entries")
-results_ws6 = results_wb.create_sheet("Sanger Sequenced")
+results_ws6 = results_wb.create_sheet("Sanger-DeepSeq Comparison")
 results_ws7 = results_wb.create_sheet("Partial Length Sequences")
 results_ws8 = results_wb.create_sheet("No common_var")
 
@@ -100,8 +100,8 @@ results_ws0['A5'].value = 'Mutation Count'
 results_ws0['B5'].value = 'All non-SDM mutations found in the dataset.'
 # results_ws0['A6'].value = 'Unidentified entries'
 # results_ws0['B6'].value = 'Entries in the master summary not found in the CDB'
-results_ws0['A7'].value = 'Sanger Sequenced Comparison'
-results_ws0['B7'].value = 'Clones with an existing Sanger Sequence, therefore record not updated'
+results_ws0['A7'].value = 'Sanger-Deepseq Comparison'
+results_ws0['B7'].value = 'Clones with an existing Sanger Sequence compared to Deeq Seq'
 results_ws0['A8'].value = 'Partial Length Sequences'
 results_ws0['B8'].value = 'As title says'
 results_ws0['A9'].value = 'No common_var'
@@ -136,6 +136,7 @@ results_ws6['D1'].value = 'denovo call'
 results_ws6['E1'].value = 'common call'
 results_ws6['F1'].value = 'Mutations Identical?'
 results_ws6['G1'].value = 'Clone Location'
+results_ws6['H1'].value = 'Starting reads'
 
 results_ws7['A1'].value = 'Construct name'
 results_ws7['B1'].value = 'De Novo sequence'
@@ -413,21 +414,22 @@ for j in range(2, msrows):
                         results_ws6['C' + str(results_ws6_row)].value = map2refvar
                     else:
                         results_ws6['C' + str(results_ws6_row)].value = sanger_muts[2]
-                        results_ws6['C' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
+                        #results_ws6['C' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
                         
                     if denovovar is not None:
                         results_ws6['D' + str(results_ws6_row)].value = denovovar
                     else:
                         results_ws6['D' + str(results_ws6_row)].value = sanger_muts[3]
-                        results_ws6['D' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
+                        #results_ws6['D' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
                         
                     if commonvar is not None:
                         results_ws6['E' + str(results_ws6_row)].value = commonvar
                     else:
                         results_ws6['E' + str(results_ws6_row)].value = ''
-                        results_ws6['E' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
+                        #results_ws6['E' + str(results_ws6_row)].fill = PatternFill(fill_type = "solid", fgColor = "ffff00")
                 
                 results_ws6['G' + str(results_ws6_row)].value = searchtext
+                results_ws6['H' + str(results_ws6_row)].value = ms['D' + str(j)].value
                 
             else:
                 # no returns from deep sequencing.

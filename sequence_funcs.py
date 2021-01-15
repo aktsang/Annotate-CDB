@@ -210,14 +210,14 @@ def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, sea
             else: 
                 return sangervar, False, map2refString, denovoString
         
-        
+    # should translate map2refseq and denovoseq to find the mutation if called
         
     else:
         print('condition 5')
         return sangervar, False, map2refString, denovoString
         
     
-            
+    
     print('COMPARE SANGER')
     print(constructname_mutations)
     print(map2refMut)
