@@ -45,6 +45,9 @@ def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, sea
     constructname_mutations = []
     constructname_stops = []
     
+    if scaffold == '514':
+        commonvar = igabasnfr_translation(commonvar)
+    
     print('Sanger Comparison')
     # pass constructname through regex to find mutations
     if 'STOP' in constructname:
@@ -173,6 +176,8 @@ def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, sea
     
     print(commonvarMut)
     print(denovoMut)
+    
+
         
     
     if commonvar is not None:
@@ -216,14 +221,13 @@ def compareSanger(constructname, commonvar, map2refseq, denovoseq, scaffold, sea
         print('condition 5')
         return sangervar, False, map2refString, denovoString
         
-    
-    
-    print('COMPARE SANGER')
-    print(constructname_mutations)
-    print(map2refMut)
-    print(denovoMut)
-    print(commonvar)
-    print(sangervar)
+    # print('COMPARE SANGER')
+    # print(constructname_mutations)
+    # print(map2refMut)
+    # print(denovoMut)
+    # print(commonvar)
+    # print(sangervar)
+
         
 
 def getSangerMutations(constructname, commonvar, map2refseq, denovoseq, scaffold, searchtext):
@@ -496,6 +500,106 @@ def findFrameshift(mutations): #pass a mutation list into this function
 
 # borrowed from:
 # https://towardsdatascience.com/starting-off-in-bioinformatics-turning-dna-sequences-into-protein-sequences-c771dc20b89f
+
+# igabasnfr_lookup parses a single mutation site from commonvar to convert to jonny's numbering system for comparison with goodMutations. 
+# used in annotate.py
+def igabasnfr_mut_lookup(mutation):
+    if mutation is not None:
+        
+        from reference_sequences import igabasnfr_lookup
+        
+        mutstarRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+\*') # search pattern for any mutation (e.g. N391X, T293Y, L405*)
+        aaRegex = re.compile(r'[A-Z]\d+') # search pattern for residue number
+        newMutRegex = re.compile(r'[A-Z]\d+([A-Z])|[A-Z]\d+(\*)')
+        
+        # first use mutstarRegex to capture whole mutation sites like H101E, A230*
+        mutSite = aaRegex.findall(mutation)
+        # print(mutSite)
+        
+        jonnysite = igabasnfr_lookup.get(mutSite[0])
+        # print(jonnysite)
+        
+        # then use newMutRegex to get the new mutations to concatenate later (E, *)
+        # from the regex definition, each entry willl be a list with len 2.
+        # H229E, A230* will return a variable containing [('E', ''), ('', '*')]
+        # the position of 'E' is [0][0]
+        # the position of '*' is [1][1]
+        mutationList = newMutRegex.findall(mutation) 
+        # print(mutationList)
+                   
+        # regex for amino acid number (e.g. S23)
+        
+        if jonnysite is not None:
+            
+            # rejoin the converted site name with its identified mutation
+            if mutationList[0][1].find('*') > -1:
+                convertedMut = jonnysite + mutationList[0][1] # add stop asterisk if found
+            else:
+                convertedMut = jonnysite + mutationList[0][0] # else add letter 
+                
+            # print('Original: ' + mutation)
+            # print('Converted:  ' + convertedMut)
+            return convertedMut
+        
+        # else:
+        #     print('jonnysite was None')
+                    
+    
+
+# igabasnfr_translation creates a new commonvar string after translating the amino acid numbers if possible.
+# used in updateMutants.py
+def igabasnfr_translation(commonvar):
+    # Convert iGABASnFR numbering if applicable...
+    if commonvar is not None:
+        
+        mutstarRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+\*') # search pattern for any mutation (e.g. N391X, T293Y, L405*)
+        aaRegex = re.compile(r'[A-Z]\d+') # search pattern for residue number
+        newMutRegex = re.compile(r'[A-Z]\d+([A-Z])|[A-Z]\d+(\*)')
+        print('...Converting iGABASnFR numbering...')
+        
+        # new variable initlialization
+        #jonny_commonvar = []
+        newcommonvar = ''
+        
+        from reference_sequences import igabasnfr_lookup
+        
+        # first use mutstarRegex to capture whole mutation sites like H101E, A230*
+        parse_commonvar = mutstarRegex.findall(commonvar) 
+        
+        # then use newMutRegex to get the new mutations to concatenate later (E, *)
+        # from the regex definition, each entry willl be a list with len 2.
+        # H229E, A230* will return a variable containing [('E', ''), ('', '*')]
+        # the position of 'E' is [0][0]
+        # the position of '*' is [1][1]
+        mutationList = newMutRegex.findall(commonvar) 
+        
+        newcommonvar = ''
+        
+        for u in range(len(parse_commonvar)):
+            
+            # regex for amino acid number (e.g. S23)
+            ds_aa = aaRegex.findall(parse_commonvar[u])
+            jonny_aa = igabasnfr_lookup.get(ds_aa[0])
+            
+            
+            if jonny_aa is not None:
+                
+                print('Converted ' + ds_aa[0] + ' to ' + jonny_aa + '.')
+                
+                # rejoin the converted site name with its identified mutation
+                if mutationList[u][1].find('*') > -1:
+                    convertedMut = jonny_aa + mutationList[u][1] # add stop asterisk if found
+                else:
+                    convertedMut = jonny_aa + mutationList[u][0] # else add letter 
+                
+                if u < len(parse_commonvar)-1:
+                    newcommonvar += convertedMut + ','
+                else: newcommonvar += convertedMut
+                
+            else:
+                newcommonvar += parse_commonvar[u]
+                
+        return newcommonvar
 
 
 def iterativeAlignment(seq, refseq):

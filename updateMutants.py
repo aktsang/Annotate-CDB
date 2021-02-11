@@ -21,6 +21,8 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
     resRegex = re.compile(r'([A-Z])\d+') # search pattern for first residue letter only, when used with .findall
     aanumRegex = re.compile(r'[A-Z](\d+)')
     stopstarRegex = re.compile(r'\*') # search for asterisk stop notation
+    newMutRegex = re.compile(r'[A-Z]\d+([A-Z])|[A-Z]\d+(\*)')
+
     
 # Look for a Sanger sequence and mutation in CDB. If it exists, do nothing to the clone name
     print('UPDATE MUTATIONS')    
@@ -28,8 +30,19 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
     newname2 = '' # the new construct name with sequenced mutations
     mutList = [] # a list of the updated (desired) mutations
     miscMutList = [] # a list of unexpected mutations
+    
+    
+    if scaffold ==  '514':
+        from sequence_funcs import igabasnfr_translation
+        cvar_copy = commonvar #create another copy of commonvar to parse in parallel with wild type searching later
+        commonvar = igabasnfr_translation(commonvar)
+        
+        # make a list of mutations in cvar_copy
+        cvar_muts = mutstarRegex.findall(cvar_copy)
+            
 
     if commonvar is not None:
+
         cname_match = mutstarRegex.findall(constructname) # get list of mutations in CDB
         commonvar_match = mutstarRegex.findall(commonvar) # get list of mutations called by DeepSeq
         
@@ -47,7 +60,7 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
         num_cdb_Matches = len(cname_match) # get number of mutations expected
         
         # string splitting on constructname
-        if len(cname_match) > 0:
+        if len(cname_match) > 0: # found mutation sites in constructname
             firstMut = constructname.find(cname_match[0])
             lastMut = constructname.find(cname_match[num_cdb_Matches-1])
             lastMutLength = len(cname_match[num_cdb_Matches-1])
@@ -67,6 +80,10 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
             matched_cname_mut = [] # to store matched constructname mutations
             unmatched_cname_mut = [] # store unmatched constructname mutations, everything can be assumed wild type
             
+
+          
+            # put all mutation sites from the database constructname into unmatched_cname_mut[]
+            # these will be moved if they get matched with mutations found by sequencing.
             for g in range(len(cname_match)): #cname_aa_match
                 unmatched_cname_mut.append(cname_match[g]) #cname_aa_match[g]
                 print(unmatched_cname_mut)
@@ -108,10 +125,34 @@ def updateMutations(constructname, map2refvar, map2refseq, denovovar, denovoseq,
                     # print(origResidueId)
                     # print(origResidueIndex)
                     
+                    if scaffold == '514':
+                        # residues in unmatched_cname_mut are currently in jonny's numbering.
+                        # convert to linear for indexing with the experimental sequence. 
+                        from reference_sequences import igabasnfr_reverse_mutated
+                        jonnyMutId = origResidueId[0] + origResidueIndex[0] # concatenate site ('I29')
+                        linearMut = igabasnfr_reverse_mutated.get(jonnyMutId) # run reverse lookup
+                        
+                        # if a match is found, parse and use the linear index number for wild type searching.
+                        if linearMut is not None:
+                            linResidueIndex = aanumRegex.findall(linearMut)
+                        else:
+                            linResidueIndex = None
+                    
                     # checking for wild type identity
-                    myindex = int(origResidueIndex[0])-1
+                    if scaffold == '514':
+                        if linResidueIndex is not None:
+                            myindex = int(linResidueIndex[0])-1 # use the linear index number 
+                        else:
+                            myindex = int(origResidueIndex[0])-1
+                    else:
+                        myindex = int(origResidueIndex[0])-1 # for non-iGABA clones, this is the default. 
+                        
                     if denovoAlignedSeq[myindex] == scaffoldAlignedSeq[myindex]:
-                        wildtypemut = origResidueId[0] + str(myindex+1) + origResidueId[0]
+                        if scaffold == '514':
+                            # this is required to feed jonny's numbering system into annotations.py
+                            wildtypemut = origResidueId[0] + origResidueIndex[0] + origResidueId[0]
+                        else:
+                            wildtypemut = origResidueId[0] + str(myindex+1) + origResidueId[0]
                         sdm_site = unmatched_cname_mut[f]
                         newname2 = newname2.replace(sdm_site, wildtypemut)
                         mutList.append(wildtypemut)

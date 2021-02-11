@@ -10,7 +10,7 @@ Called by main.py
 import re
 
 # This function creates a comment with called mutations and extra undesired mutations ("xmutations")
-def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold):
+def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold, commonvar):
     
     from reference_sequences import scaffold_protein
     from reference_sequences import scaffold_dna
@@ -19,20 +19,96 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
     mutRegex = re.compile(r'[A-Z]\d+[A-Z]|[A-Z]\d+\*') # search pattern for any mutation (e.g. N391X, T293Y, L405*)
     mutResidueRegex = re.compile(r'[A-Z]\d+([A-Z]|\*)') # search pattern to return the mutation residue, e.g. X, Y, or *
     aanumRegex = re.compile(r'[A-Z](\d+)') # search pattern for residue number
+    aaRegex = re.compile(r'[A-Z]\d+') # search pattern for residue number
     
     newComment = '_DS: '
     
     scaffoldSeq = scaffold_dna[str(scaffold)]
     reflength = len(scaffoldSeq)
     
+    if scaffold == '514':
+        from sequence_funcs import igabasnfr_mut_lookup
+        
+        # temporarily replace 'STOP' with '*' so regex can find it
+        if 'STOP' in commonvar:
+            cvar = commonvar.replace('STOP', '*')
+            commonvar_sites = mutRegex.findall(cvar) 
+        
+        else:
+            commonvar_sites = mutRegex.findall(commonvar)
+            
+        
+        
+        # for g in range(len(commonvar_sites)):
+        #     jonnysite = igabasnfr_mut_lookup(commonvar_sites[g])
+        #     # jonnysite comes back with * denoting stops, so convert it
+        #     if jonnysite is not None:
+        #         if '*' in jonnysite:
+        #             jonnysite = jonnysite.replace('*', 'STOP')
+                
+        #     if jonnysite in goodMutations:
+        #         for h in range(len(goodMutations)):
+        #             if jonnysite == goodMutations[h]:
+        #                 goodMutations[h] = commonvar_sites[g]
+        #                 #commonvar_sites.remove(commonvar_sites[g])
+        #     elif jonnysite in extraMutations:
+        #         for s in range(len(extraMutations)):
+        #             if jonnysite == extraMutations[s]:
+        #                 extraMutations[s] = commonvar_sites[g]
+                        
+        # # iterate and change all '*' to 'STOP'
+        # for t in range(len(goodMutations)):
+        #     if '*' in goodMutations[t]:
+        #         goodMutations[t] = goodMutations[t].replace('*', 'STOP')
+                
+        # for u in range(len(extraMutations)):
+        #     if '*' in extraMutations[u]:
+        #         extraMutations[u] = extraMutations[u].replace('*', 'STOP')
+                        
+                    
+        # print(goodMutations)
+    
     
     if goodMutations is not None:
         numGoodMuts = len(goodMutations)
         for i in range(0, numGoodMuts):
-            mutation = goodMutations[i] # gets mutation name (e.g. T392Y) as string
-            mutResidue = mutResidueRegex.findall(mutation) # gets mutated residue (e.g. Y or *) as list
-            residueNum = aanumRegex.findall(mutation) # finds the residue number (e.g. 392) as list
-            residueIndex = int(residueNum[0])# convert to integer
+            
+            #igabasnfr handling 2/9/20
+            if scaffold == '514':
+                mutation = goodMutations[i]
+                if 'STOP' in mutation:
+                    mutation = mutation.replace('STOP', '*')
+                print('mutation' + mutation)
+                jonnySite = aaRegex.findall(mutation)
+                print('jonnySite')
+                print(jonnySite)
+                from reference_sequences import igabasnfr_reverse_mutated
+                if len(jonnySite) > 0:
+                    linResidue = igabasnfr_reverse_mutated.get(jonnySite[0])
+                else:
+                    linResidue = None
+                print('linResidue')
+                print(linResidue)
+                mutResidue = mutResidueRegex.findall(mutation)
+                print('mutResidue')
+                print(mutResidue)
+                if linResidue is not None:
+                    residuenum = aanumRegex.findall(linResidue)
+                    print('residuenum')
+                    print(residuenum)
+                else:
+                    residuenum = aanumRegex.findall(mutation)
+                    print('residuenum')
+                    print(residuenum)
+                residueIndex = int(residuenum[0])
+                print('residueIndex')
+                print(residueIndex)
+                
+            else:
+                mutation = goodMutations[i] # gets mutation name (e.g. T392Y) as string
+                mutResidue = mutResidueRegex.findall(mutation) # gets mutated residue (e.g. Y or *) as list
+                residueNum = aanumRegex.findall(mutation) # finds the residue number (e.g. 392) as list
+                residueIndex = int(residueNum[0])# convert to integer
             
             ### make an indexable list of codons from denovo sequence to get the mutation codons
             denovoseq_codon_index = codon_index(denovoseq) # produces a list of codons for denovoseq
@@ -40,7 +116,15 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
             
             ### full or partial length
             
-            newComment += mutation + ', ' + mutCodon + ', '
+            if scaffold == '514':
+                if mutResidue[0] == '*':
+                    mutResidue[0] = mutResidue[0].replace('*','STOP')
+                if linResidue is None:
+                    newComment += jonnySite[0] + mutResidue[0] + ',' + mutCodon + ','
+                else:
+                    newComment += linResidue + mutResidue[0] + ',' + mutCodon + ','
+            else:
+                newComment += mutation + ', ' + mutCodon + ', '
         
         # moved out of the above for loop  8/17/20
         if len(denovoseq) > 0.9 * reflength: # here, having more than 90% of the gene sequence length is considered full length
@@ -85,6 +169,7 @@ def annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, 
             newComment += 'sub-' + xmutation + ', '
         
     finalComment = origComment + newComment
+    # print(finalComment)
     return finalComment
 
 

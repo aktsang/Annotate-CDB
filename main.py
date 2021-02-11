@@ -285,7 +285,7 @@ for j in range(2, msrows):
                     extraMutations = newconstructname[2]
                     
                     from annotations import annotate
-                    finalComment = annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold)
+                    finalComment = annotate(origComment, goodMutations, extraMutations, map2refvar, denovovar, denovoseq, scaffold, commonvar)
                     
                     from sequence_funcs import findFrameshift
                     frameshiftList = findFrameshift(denovovar)
@@ -466,4 +466,5 @@ results_wb.save(results_summary_file)
 results_wb.close()
 master_summary_file.close()
 
+print('Please note that off-target mutations of iGABASnFR variants may be annotated with the linear numbering scheme.')
 print('The operation has completed.')
